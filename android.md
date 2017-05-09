@@ -24,11 +24,10 @@ onDestroy()					  销毁Activity时被调用。
 
 onRestart()					  重启Activity时被调用，当Activity从不可见重新变为可见时，就会调用该方法。
 
-![图片1](E:\资料\MarkDown引用\图片1.png)
+![pic1](/images/activity1.png)
 
-![图片2](E:\资料\MarkDown引用\图片2.png)
+![pic2](/images/activity2.png)
 
----
 
 ## Activity的四种加载模式以及使用场景
 
