@@ -97,11 +97,51 @@ Service生命周期图三：
 
 后面在启动服务时，服务只执行onStartCommand，不再执行OnCreate
 
-**同一服务A，用任何组件多次bindA时**
+**同一服务A，用任何组件多次bind服务A时**
 
 第一次绑定时会调用onCreate->onBind()。随后无论哪个组件再绑定几次该Service。服务A的onCreate()和onBind()只调用一次。
 
 ## Binder机制原理
+
+[Linux](http://lib.csdn.net/base/linux)已经拥有的进程间通信IPC手段包括(Internet Process Connection)： 管道（Pipe）、信号（Signal）和跟踪（Trace）、插口（Socket）、报文队列（Message）、共享内存（Share Memory）和信号量（Semaphore）。
+
+而Android采用的是Binder。**Binder基于Client-Server通信模式，传输过程只需一次拷贝，为发送发添加UID/PID身份，既支持实名Binder也支持匿名Binder，安全性高。**
+
+Binder框架定义了四个角色：Server，Client，ServiceManager（以后简称SMgr）以及Binder驱动。其中Server，Client，SMgr运行于用户空间，驱动运行于内核空间。
+
+### Binder机制包括以下五个部分：
+
+* Binder驱动
+
+  ​Binder驱动的核心是维护一个binder_proc类型的链表。里面记录了包括ServiceManager在内的所有Client信息，当Client去请求得到某个Service时，Binder驱动就去binder_proc中查找相应的Service返回给Client，同时增加当前Service的引用个数。
+
+* Service Manager
+
+  ​	Service Manager主要负责管理Android系统中所有的服务，当客户端要与服务端进行通信时，首先就会通过Service Manager来查询和取得所需要交互的服务。每个服务需要向Service Manager注册自己提供的服务。
+
+* 服务端
+
+  ​	通常是Android的系统服务，通过Service Manager可以查询和获取到某个Server。
+
+* 客户端
+
+  ​	一般指Android系统上的应用程序，它可以请求Server中的服务，常见的客户端是Activity。
+
+* 服务代理
+
+  ​	服务代理是指在客户端应用程序中生成的Server代理(Proxy)，从应用程序的角度看，代理对象和本地对象没有差别，都可以调用其方法，方法都是同步的，并且返回相应的结果。服务代理也是Binder机制的核心模块。
+
+**Binder系统架构图**:
+
+![img](images/binder1.png)
+
+**Binder各组件之间的关系：**
+
+![binder2](/images/binder2.png)
+
+**Binder通讯流程**
+
+![binder3](images/binder3.PNG)
 
 ## Handler实现原理
 
