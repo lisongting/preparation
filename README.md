@@ -7,4 +7,9 @@ Android面试常考知识点归纳：[android.md](/android.md)
 
 计算机网络：[network.md](/network.md)
 
-操作体统：[operating_system.md](/operating_system.md)
+操作系统：[operating_system.md](/operating_system.md)（还没开始做）
+
+数据库：[SQL.md](/SQL.md)  （还没开始做）
+
+一些密码学的东西：[cryptography.md](cryptography.md)  （还没开始做）
+

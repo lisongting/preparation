@@ -286,11 +286,277 @@ public class User implements Parcelable{
 
 ```
 
-### 实现IPC的几种方式
-
-1.使用Bundle
 
 
+### 实现IPC的六种方式
+
+简记：**A  B  C  F  S  M  **
+
+A--AIDl  B--Bundle  C--ContentProvider 
+
+F--File    S--Socket   M--Mesenger     
+
+1.使用Bundle      
+
+android的四大组件都可使用Bundle传递数据  所以如果要实现四大组件间的进程间通信 完全可以使用Bundle来实现 简单方便  。
+
+优点：**简单易用**
+
+缺点：**只能传输Bundle支持的数据类型**
+
+适用场景：**用于android四大组件间的进程间通信**。
+
+2.文件共享
+
+这种方式在单线程读写的时候比较好用， 如果有多个线程并发读写的话需要限制线程的同步读写 。另外 SharePreference是个特例  它底层基于xml实现  但是系统对它的读写会基于缓存，也就是说再多进程模式下就变得不那么可靠了，有很大几率丢失数据。
+
+优点：**简单易用**
+
+缺点：**不适合高并发场景，并且无法做到进程间的及时通讯**
+
+适用场景：**无并发访问的情形，交换简单的数据，数据实时性要求不高的场景**。
+
+3.AIDL
+
+优点：**功能强大，支持一对多并行通信，支持实时通信**
+
+缺点：**使用稍微复杂，需要处理好线程同步**
+
+适用场景：**一对多通信，远程过程调用（RPC）的场景**
+
+4.Messenger
+
+Messenger 可以翻译为信使，通过该对象，可以在不同的进程中传递Message对象。
+
+客户端向服务端发送消息，可分为以下几步。
+
+服务端
+
+- 创建Service
+- 构造Handler对象，实现handlerMessage方法。
+- 通过Handler对象构造Messenger信使对象。
+- 通过Service的onBind()返回信使中的Binder对象。
+
+客户端
+
+- 创建Actvity
+- 绑定服务
+- 创建ServiceConnection,监听绑定服务的回调。
+- 通过onServiceConnected()方法的参数，构造客户端Messenger对象
+- 通过Messenger向服务端发送消息。
+
+实现服务端
+
+```java
+public class MessengerService extends Service {
+    //构建handler 对象
+    public static Handler handler = new Handler(){
+        public void handleMessage(android.os.Message msg) {
+            // 接受客户端发送的消息
+            String msgClient = msg.getData().getString("msg");
+            Log.i("messenger","接收到客户端的消息--"+msgClient);
+          // 获取客户端Messenger 对象
+           Messenger messengetClient = msg.replyTo;
+          
+           // 向客户端发送消息
+            Message message = Message.obtain();
+            Bundle data = new Bundle();
+            data.putString("msg", "ccccc");
+            message.setData(data);
+            try {
+                // 发送消息
+                messengetClient.send(message);
+            } catch (RemoteException e) {
+                // TODO Auto-generated catch block
+                e.printStackTrace();
+            }
+        };
+    };
+    // 通过handler 构建Mesenger 对象
+    private final Messenger messenger = new Messenger(handler);
+    @Override
+    public IBinder onBind(Intent intent) {
+        // 返回binder 对象
+        return messenger.getBinder();
+    }
+}
+```
+
+实现客户端
+
+```java
+public class MessengerActivity extends AppCompatActivity {  
+    //Messenger 对象
+    private Messenger mService;
+  
+   public static Handler handler = new Handler(){
+        public void handleMessage(android.os.Message msg) {
+            // 接受服务端发送的消息
+            String msgService = msg.getData().getString("msg");
+        };
+    };
+  
+ // 通过handler 构建Mesenger 对象
+    private final Messenger messengerClient = new Messenger(handler);
+  
+    private ServiceConnection conn = new ServiceConnection() {
+        public void onServiceConnected(ComponentName name, IBinder service) {
+            // IBinder 对象
+            // 通过服务端返回的Binder 对象 构造Messenger 
+            mService = new Messenger(service);
+            Log.i("messenger", "客户端以获取服务端Messenger对象");
+        }
+        public void onServiceDisconnected(ComponentName name) {
+        }
+    };
+    protected void onCreate(@Nullable Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_messenger);
+        // 启动服务
+        Intent intent = new Intent(this, MessengerService.class);
+        bindService(intent, conn, BIND_AUTO_CREATE);
+    }
+    // 布局文件中添加了一个按钮，点击该按钮的处理方法
+    public void send(View view) {
+        try {
+            // 向服务端发送消息
+            Message message = Message.obtain();
+            Bundle data = new Bundle();
+            data.putString("msg", "lalala");
+            message.setData(data);
+          
+            // ----- 传入Messenger 对象,这样客户端可以接受服务端传回来的消息
+            message.replyTo = messengerClient;
+          
+            // 发送消息
+            mService.send(message);
+            Log.i("messenger","向服务端发送了消息");
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+}
+```
+
+如果需要服务端和客户端能够双向通信，则在每一边都需要有Messenger和Handler，Messenger用来发送消息，在Handler中的handleMessage()中接受Message中的数据。
+
+优点：**功能一般，支持一对多串行通信，支持实时通信**
+
+缺点：**不能很好的处理高并发情形，只能传递Bundle能携带的数据**
+
+适用场景：**低并发的一对多及时通信，无RPC需求**
+
+5.ContentProvider
+
+ContentProvider是Android中提供的，专门用于不同应用间进行数据共享的方式。
+
+创建一个自定义的ContentProvider，继承ContentProvider，并实现六个方法：
+
+```java
+public class BookPrivider extends ContentProvider{
+  public boolean onCreate(){
+    *****
+    //返回true则代表BookProvider已成功创建
+    return true;
+  }
+  public String getType(Uri uri){
+    ******
+  }
+  public Cursor query(Uri uri,String[] projection,String selection,String[] selectionArgs,String sortOrder){
+    *****
+  }
+  public int delete(Uri uri,String selection,String[] selectionArgs){
+  	****  
+  }
+  public Uri insert(Uri uri,ContentValues values){
+    ****
+  }
+  public int update(Uri uri,ContentValues values,String selection,String[] selectionArgs){
+    
+    
+  }
+}
+```
+
+在AndroidManifest.xml中声明ContentProvider:
+
+android:authorities是ContentProvider的唯一标识，android:permission是要求访问者必须声明的权限，如果没有这个权限，则不能访问。
+
+```java
+<provider
+  android:name="xx.xxx.BookProvider"
+  android:authorities="aaa.bbb.ccc"
+  android:permission="rrr.ttt.bbb"
+  >
+</provider>
+```
+
+使用ContentResolver访问ContentProvider共享出来的数据：
+
+```java
+***
+//这个Uri就是在content后面加上authorities
+Uri uri = Uri.parse("content://aaa.bbb.ccc");
+ContentResolver resolver = getContentResolver();
+resolver.query(uri,null,null,null,null);
+****
+```
+
+优点：**在数据源访问方面功能强大，支持一对多并发数据共享**
+
+缺点：**这相当于一种受约束的AIDL，主要提供数据源的CRUD操作**
+
+适用场景：**一对多的进程间的数据共享**
+
+6.Socket
+
+服务端：
+
+```java
+*****
+//使用端口为参数，创建ServerSocket对象
+ServerSocket ss = new ServerSocket(12345);
+*****
+// 获取客户端的Socket 对象
+Socket socket = ss.accept();
+
+// 获取输入流  --- 
+BufferedReader br = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+// 通过输入流读取客户端的消息
+//String line = br.readLine();
+// 输出流
+BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
+// 通过输出流向客户端发送消息
+//bw.write("....");
+
+// 关闭连接
+socket.close();
+```
+
+客户端：
+
+```java
+**** 
+Socket s = new Socket("localhost", 12345);
+// ----- 和服务端类似
+BufferedReader br = new BufferedReader(new InputStreamReader(s.getInputStream()));
+//String line = br.readLine();
+// 输出流
+BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(s.getOutputStream()));
+//bw.write("....");
+// 关闭连接
+s.close();
+```
+
+优点：**功能强大，可以通过网络传输字节流，支持一对多并发实时通信**
+
+缺点：**实现细节有点繁琐，不支持RPC**
+
+适用场景：**网络数据交换**
+
+
+
+---
 
 ## Handler实现原理
 
@@ -302,7 +568,12 @@ public class User implements Parcelable{
 
   ​
 
-  ## 自定义View 	
+  ​
+
+  ​
+
+
+## 自定义View 
 
 ### 分类
 
