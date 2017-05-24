@@ -178,7 +178,11 @@
 
   （3）**TFTP**(Trival File Tran敏感词er  Protocal)，简单文件传输协议，该协议在熟知端口**69**上使用UDP服务。 
 
+哪些协议是使用TCP或UDP：
 
+TCP：HTTP,FTP,SMTP,TENET,POP3,Finger,NNTP,IMAP4,
+
+UDP：BOOTP,DHCP,NTP,TFTP,SNMP
 
 ##  DNS域名系统，简单描述其工作原理。
 

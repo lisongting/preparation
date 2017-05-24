@@ -24,7 +24,7 @@ Android平台不仅仅是操作系统，也包含了许多应用程序，诸如S
 
 系统运行库层可以分成两部分，分别是系统库和Android运行时。系统库是应用程序框架的支撑，是连接应用程序框架层与Linux内核层的重要纽带。 Android应用程序时采用Java语言编写，程序在Android运行时中执行，其运行时分为核心库和Dalvik虚拟机两部分。
 
-### Dalvik和ART
+Dalvik和ART：
 
 **什么是Dalvik？**
 Dalvik是Google公司自己设计用于Android平台的虚拟机。
@@ -290,7 +290,7 @@ public class User implements Parcelable{
 
 ### 实现IPC的六种方式
 
-简记：**A  B  C  F  S  M  **
+简记：**A  B  C  F  S  M**
 
 A--AIDl  B--Bundle  C--ContentProvider 
 
@@ -646,6 +646,12 @@ public CircleView(Context context, AttributeSet attrs, int defStyleAttr){
 
 
 ## Touch事件的传递机制
+
+
+
+
+
+
 
 ## Android中的几种动画
 
