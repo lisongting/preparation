@@ -178,7 +178,8 @@ Integer f1 = 100, f2 = 100, f3 = 150, f4 = 150;
 * ExtClassLoaders：扩展类的类加载器
 * AppClassLoader ：程序类加载器
 * 用户继承ClassLoader重写的类加载器
-*  
+
+  ​
 
 通常可以使用不同的类加载器从不同的来源加载类的二进制数据：
 
@@ -221,5 +222,213 @@ Java语言的方法调用只支持参数的值传递。当传入的是基本数�
 * 接口里不包含构造器。抽象类可以包含构造器（抽象类里的构造器不是用于创建对象的，而是让其子类调用这些构造器来完成类的初始化）。
 * 接口里不能包含初始化块，而抽象类里可以包含初始化块。
 * 一个类最多只能有一个直接父类，包括抽象类，而一个类可以实现多个接口，通过实现多个接口来弥补Java单继承的不足。
-* 抽象类中的成员可以是private、默认、protected、public的，而接口中的成员全都是public的。
+* 抽象类中的成员可以是`private`、默认、`protected`、`public`的，而接口中的成员全都是`public`的。
+
+
+## Static关键字
+
+static 关键字可以用来修饰：
+
+* **方法** ：被修饰的方法就变成了**静态方法**，静态方法从属于类而不是从属于某个对象，无需本类的对象即可调用此方法。声明为static的方法有以下几条限制：他们仅能调用其他的静态方法；仅能访问static数据；他们不能以任何方式引用this或super。
+* **变量** ：被修饰的变量就变成了**静态变量**， 静态变量实质上就是全局变量，当声明一个对象时，并不产生static变量的拷贝，而是该类所有的实例变量共用同一个static变量。静态变量与静态方法类似。所有此类实例共享此静态变量，也就是说在类装载时，只分配一块存储空间，所有此类的对象都可以操控此块存储空间。
+* **内部类** ：被修饰的内部类就变成了**静态内部类** ，它可以不依赖于外部类实例而被实例化。而通常的内部类需要在外部类实例化之后才能实例化。
+* **静态代码块** ：被修饰的语句块是在类中独立于类成员的**static语句块** ，一般用于进行类的初始化操作，对一些静态变量赋值等。静态代码块可以有多个，位置可以随便放，它不在任何的方法体内，JVM加载类时会执行这些静态的代码块，如果static代码块有多个，JVM将按照它们在类中出现的先后顺序依次执行它们，每个代码块只会被执行一次。
+
+
+
+## final关键字
+
+final关键字可以用来修饰：
+
+* **类** ：final类**不能被继承** ，因此final类的成员方法没有机会被覆盖，默认都是final的。在设计类时候，如果这个类不需要有子类，类的实现细节不允许改变，并且确信这个类不会载被扩展，那么就设计为final类。
+* **变量** ：用final修饰的成员变量表示常量，一旦赋予了初始值就无法改变！final成员变量必须在声明的时候初始化或者在静态初始化块中初始化，或者在构造器中初始化，否则就会报编译错误。
+* **方法** ：如果一个类**不允许其子类覆盖某个方法** ，则可以把这个方法声明为final方法。 使用final方法的原因有两个：
+  ​        第一、把方法锁定，防止任何继承类修改它的意义和实现。
+  ​        第二、高效。编译器在遇到调用final方法时候会转入内嵌机制，大大提高执行效率。
+* **函数参数** ：当函数参数为final类型时，可以读取使用该参数，但是无法改变该参数的值。
+
+下面总结了一些使用final关键字的好处：
+
+1. final关键字提高了性能。JVM和Java应用都会缓存final变量。
+2. final变量可以安全的在多线程环境下进行共享，而不需要额外的同步开销。
+3. 使用final关键字，JVM会对方法、变量及类进行优化。
+
+
+
+## 深克隆和浅克隆
+
+- **浅克隆** : 通常只是对克隆的实例进行复制，但里面的其他子对象，都是共用的。（被复制对象的所有变量都含有与原来的对象相同的值，而所有的对其他对象的引用仍然指向原来的对象。换言之，浅复制仅仅复制所考虑的对象，而不复制它所引用的对象。）
+- **深克隆** : 克隆的时候会克隆它的子对象的引用，里面所有的变量和子对象都是又额外拷贝了一份。（被复制对象的所有变量都含有与原来的对象相同的值，除去那些引用其他对象的变量。那些引用其他对象的变量将指向被复制过的新对象，而不再是原有的那些被引用的对象。换言之，深复制把要复制的对象所引用的对象都复制了一遍。）
+
+浅克隆：
+
+```java
+class Father implements Cloneable {  
+    public String name;  
+    public int age;  
+    public Father(String name, int age) {  
+        this.name = name;  
+        this.age = age;  
+    }    
+}  
+  
+public class Child implements Cloneable {  
+    public String name;  
+    public int age;  
+    public Father father;  
+    public Child(String name, int age, Father father) {  
+        this.name = name;  
+        this.age = age;  
+        this.father = father;  
+    }      
+    public Object clone() {  
+        Child child = null;  
+        try {  
+            child = (Child) super.clone();  
+        } catch (CloneNotSupportedException e) {  
+            e.printStackTrace();  
+        }  
+        return child;  
+    }  
+  
+   public static void main(String[] args) {  
+        Father father = new Father("李刚", 44);  
+        Child child1 = new Child("李小刚", 14, father);  
+        Child child2 = (Child) child1.clone();  
+        child2.father.name = "赵刚";  
+        child2.father.age = 40;  
+        child2.name = "赵小刚";  
+        child2.age = 15;  
+        System.out.println(child1.name + " " + child1.age);  
+        System.out.println(child1.father.name + " " + child1.father.age);  
+        System.out.println(child2.name + " " + child2.age);  
+        System.out.println(child2.father.name + " " + child2.father.age);  
+    }  
+//  运行结果  
+//  李小刚 14  
+//  赵刚 40  
+//  赵小刚 15  
+//  赵刚 40  
+//  浅克隆时father对象都是共用的，所以father重新赋值之后，之前的值也跟着变化。
+}
+```
+
+深克隆：
+
+```java
+class Father implements Cloneable {  
+      
+    public String name;  
+    public int age;  
+      
+    public Father(String name, int age) {  
+        this.name = name;  
+        this.age = age;  
+    }  
+      
+    public Object clone() {  
+        Father father = null;  
+        try {  
+            father = (Father) super.clone();  
+        } catch (CloneNotSupportedException e) {  
+            e.printStackTrace();  
+        }  
+        return father;  
+    }  
+    
+}  
+  
+public class Child implements Cloneable {   
+    private String name;  
+    private int age;  
+    private Father father;     
+    public Child(String name, int age, Father father) {  
+        this.name = name;  
+        this.age = age;  
+        this.father = father;  
+    }  
+    public Object clone() {  
+        Child child = null;  
+        try {  
+            child = (Child) super.clone();  
+            child.father = (Father) father.clone();  
+        } catch (CloneNotSupportedException e) {  
+            e.printStackTrace();  
+        }  
+        return child;  
+    }  
+public static void main(String[] args) {  
+        Father father = new Father("李刚", 44);  
+        Child child1 = new Child("李小刚", 14, father);  
+        Child child2 = (Child) child1.clone();  
+        child2.father.name = "赵刚";  
+        child2.father.age = 40;  
+        child2.name = "赵小刚";  
+        child2.age = 15;  
+        System.out.println(child1.name + " " + child1.age);  
+        System.out.println(child1.father.name + " " + child1.father.age);  
+        System.out.println(child2.name + " " + child2.age);  
+        System.out.println(child2.father.name + " " + child2.father.age);  
+    }  
+//  运行结果  
+//  李小刚 14  
+//  李刚 44  
+//  赵小刚 15  
+//  赵刚 40  
+//  深克隆时father对象也 重新拷贝了一份，所以father重新赋值之后，之前的值不会发生变化。   
+}  
+```
+
+
+
+## 日期和时间
+
+1.**如何取得年月日、小时分钟秒?** 
+
+```java
+Calendar cal = Calendar.getInstance();
+System.out.println(cal.get(Calendar.YEAR));
+System.out.println(cal.get(Calendar.MONTH)); // 值为0 - 11。如果是5月则该值为4
+System.out.println(cal.get(Calendar.DATE));
+System.out.println(cal.get(Calendar.HOUR_OF_DAY));
+System.out.println(cal.get(Calendar.MINUTE));
+System.out.println(cal.get(Calendar.SECOND));
+		
+// Java 8
+LocalDateTime dt = LocalDateTime.now();
+System.out.println(dt.getYear());
+		System.out.println(dt.getMonthValue()); //值为1 - 12，如果是5月则该值为5
+		System.out.println(dt.getDayOfMonth());
+		System.out.println(dt.getHour());
+		System.out.println(dt.getMinute());
+		System.out.println(dt.getSecond());
+```
+
+2.**如何取得从1970年1月1日0时0分0秒到现在的毫秒数?**  
+
+三种方法：
+
+```java
+//1
+Calendar.getInstance().getTimeInMillis();
+//2
+System.currentTimeMillis();
+//3
+Clock.systemDefaultZone().millis(); // Java 8
+```
+
+3.**如何取得某月的最后一天?** 
+
+```java
+Calendar time = Calendar.getInstance();
+time.getActualMaximum(Calendar.DAY_OF_MONTH);
+```
+
+4.**如何格式化日期?** 
+
+```java
+SimpleDateFormat dataFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss"); 
+Date date1 = new Date();
+System.out.println(dataFormat.format(date1));
+```
 
