@@ -101,9 +101,78 @@ onRestart()					  重启Activity时被调用，当Activity从不可见重新变�
 
 ## Activity与Fragment通信
 
+1.Fragment从Activity获取数据
+
+直接在Fragment中使用`getActivity.getIntent()` ，这样就能拿到Intent，从而获取Intent中携带的数据。
+
+2.Activity从Fragment中获取数据
+
+```java
+//创建Fragment的实例
+ExampleFragment fragment =(ExampleFragment)getFragmentManager().findFragmentById(R.id.example_fragment);  
+//调用fragment中的方法(前提是在fragment中提前定义)
+fragment.setXXX()；
+fragment.getXXX();
+```
+
+3.fragment之间相互通信
+
+直接在一个Fragment中调用另外一个Fragment中的方法。如
+
+```java
+ContentFragment cf = (ContentFragment) getActivity()
+                         .getFragmentManager().findFragmentById(R.id.content_fg);
+cf.show(name);
+```
+
+4.使用回调接口的方式实现Activity与Fragment通信
+
+在Fragment中定义接口：
+
+```java
+public class MyFragmnt extends Fragment{
+  private onTextListener mListener;
+  ***
+    public interface onTextListener(){
+    	public void onTest(String str);   
+  }
+  ***
+}
+
+```
+
+在Activity中实现接口中的方法：
+
+```java
+public class MainActivity extends Activity implements MyFragment.onTestListener {
+  ****
+  public void onTest(String str){
+    Toast.make(this,str,Toast.LENGTH_SHORT).show();
+  }
+    
+ *** 
+}
+```
 
 
 
+在fragment的onAttach()中：
+
+```java
+@Override
+public void onAttach(Activity activity){  
+      super.onAttach(activity);  
+      try{  
+          mListener =(onTestListener)activity;  
+      }catch(ClassCastException e){  
+          throw new ClassCastException(activity.toString()+"must implement onTestListener");  
+      }  
+  }  
+```
+
+
+
+然后fragment在合适的地方就可以调用`mListener.onTest(str)` 
 
 ## Service
 
