@@ -726,14 +726,133 @@ public CircleView(Context context, AttributeSet attrs, int defStyleAttr){
 
 ### 逐帧动画
 
+逐帧动画，把动画过程的每张静态图片都收集起来，然后由Android来控制依次展示这些静态图片，再利用人眼“视觉暂留”的原理，给用户以“动画”的感觉。实际就是一帧接着一帧的播放图片，就像放电影一样。
 
+逐帧动画放在/drawable文件夹下，逐帧动画的语法：
+
+![anim1](images/anim1.png)
+
+每一个`<item>` 都对应着一帧。
+
+使用示例：
+
+先在imageView的xml中指定逐帧动画：
+
+```java
+<ImageView
+  android:id="@+id/iv"
+  android:layout_width="wrap_content"
+  android:layout_height="wrap_content"
+  android:background="@drawable/anim.xml"/>
+```
+
+然后在java代码中使用：
+
+```java
+AnimationDrawable anim = (AnimationDrawable)imageView.getBackground();
+
+//开始播放
+anim.start();
+//停止播放
+anim.stop();
+```
 
 ### 补间动画
+
+补间动画就是，开发者只需指定动画开始、动画结束等“关键帧”，而动画变化的“中间帧”由系统计算并补齐。补间动画是操作某个控件让其展现出旋转、渐变、移动、缩放等转换过程。我们可以用XML形式定义动画，也可以编码实现。
+
+补间动画放在res/anim文件夹下(需要手动创建)。
+
+补间动画语法：
+
+![anim3](images/anim3.png)
+
+使用示例：
+
+```java
+//先加载。my_anim是补间动画名称
+Animation anim = AnimationUtils.loadAniation(context,R.anim.my_anim);
+anim.setFillAfter(true);
+//使用ImageView播放
+imageView.startAnimation(anim);
+
+```
 
 
 
 ### 属性动画
 
+属性动画是增强版的补间动画，属性动画的强大可以体现在如下两个方面：1.补间动画只能定义两个关键帧在透明度，旋转，缩放，位移四个方面的变化，但属性动画可以令对象进行更多特征变化。2.补间动画只能对UI组件执行动画，但属性动画几乎可以对任何对象执行动画（不管它是否显示在屏幕上）。
+
+1.Animator	
+
+Animator是属性动画的基类，是一个抽象类，该类中定义了许多重要方法，如下所示：
+
+* setDuration(long duration)：设置动画总共的持续时间，以毫秒为单位。
+* start()：通过start方法可以启动动画，动画启动后不一定会立即运行。如果之前通过调用setStartDelay方法设置了动画延迟时间，那么会在经过延迟时间之后再运行动画；如果没有设置过动画的延迟时间，那么动画在调用了start()方法之后会立即运行。
+* setStartDelay(long startDelay)：设置动画的延迟运行时间，比如调用setStartDelay(1000)意味着动画在执行了start()方法1秒之后才真正运行。
+* setInterpolator(TimeInterpolator value)：改变动画所使用的时间插值器，由于视图动画也需要使用时间插值器，所以我们可以使用android.view.animation命名空间下的一系列插值器，将其与属性动画一起工作。
+* pause()：该方法可以暂停动画的执行。调用pause()方法的线程必须与调用start()方法的线程是同一个线程。
+* resume()：如果动画通过调用pause()方法暂停了，那么之后可以通过调用resume()方法让动画从上次暂停的地方继续运行。
+* end()：动画结束运行，直接从当前状态跳转到最终的完成状态，并将属性值分配成动画的终止值
+* addListener (Animator.AnimatorListener listener)：通过addListener方法向Animator添加动画监听器，该方法接收的是AnimatorListener接口类型的参数，其具有四个方法：onAnimationStart、onAnimationCancel、onAnimationEnd、onAnimationRepeat。这四个方法分别在动画被启动，被取消，结束和重复播放时被回调。
+
+2.ValueAnimator
+
+ValueAnimator是属性动画的“时间引擎”，它负责计算各个帧的属性值。中有两个比较重要的属性，一个是TimeInterpolator类型的属性，另一个是TypeEvaluator类型的属性。TimeInterpolator指的就是时间插值器，TypeEvaluator表示的是ValueAnimator对哪种类型的值进行动画处理。	ValueAnimator提供了四个静态方法ofFloat()、ofInt()、ofArgb()和ofObject()，通过这四个方法可以对不同种类型的值进行动画处理，这四个方法对应了四种TypeEvaluator。
+
+* public static ValueAnimator ofFloat (float… values)：ofFloat方法接收一系列的float类型的值，其内部使用了FloatEvaluator。通过该方法ValueAnimator可以对float值进行动画渐变。
+
+ValueAnimator使用示例：
+
+![anim4](images/anim4.png)
+
+* public static ValueAnimator ofInt (int… values)：ofInt方法与ofFloat方法很类似，只不过ofInt方法接收int类型的值，ofInt方法内部使用了IntEvaluator，其使用可参考上面ofFloat的使用代码。
+* public static ValueAnimator ofArgb (int… values)：该方法接收一系列代表了颜色的int值，其内部使用了ArgbEvaluator，可以用该方法实现将一个颜色动画渐变到另一个颜色，我们从中可以不断获取中间动画产生的颜色值。
+* public static ValueAnimator ofObject (TypeEvaluator evaluator, Object… values):ValueAnimator提供了一个ofObject方法，该方法接收一个TypeEvaluator类型的参数，我们需要实现该接口TypeEvaluator的evaluate()方法，只要我们实现了TypeEvaluator接口，我们就能通过ofObject方法处理任意类型的数据。
+
+3.ObjectAnimator	
+
+ObjectAnimator继承自ValueAnimator。要让属性动画渐变式地更改对象中某个属性的值，可分两步操作：第一步，动画需要计算出某一时刻属性值应该是多少；第二步，需要将计算出的属性值赋值给动画的属性。	
+
+ValueAnimator只实现了第一步，也就是说ValueAnimator只负责以动画的形式不断计算不同时刻的属性值，但需要我们开发者自己写代码在动画监听器AnimatorUpdateListener的onAnimationUpdate方法中将计算出的值通过对象的setXXX等方法更新对象的属性值。ObjectAnimator比ValueAnimator更进一步它会自动调用对象的setXXX方法更新对象中的属性值。
+
+ObjectAnimator中常用的方法有：
+
+* ofFloat(Object target, String propertyName, float… values)：target是指要操作的对象，propertyName是指属性名，常见的属性名有：“translationX”(表示横向变换)，“translationY”(纵向变换),”alpha”(变换透明度),”rotation”(旋转变换),”backgroundColor”(表示背景色变换)等等。
+* ofInt(Object target, String propertyName, int… values)：与float作用相同，只是数据类型的差别。ofObject(Object target, String propertyName, TypeEvaluator evaluator, Object… values) ：与ValueAnimator 中的ofObject类似，都需要传入自定义的TypeEvaluator对象。
+* ofObject(Object target, String propertyName, TypeEvaluator evaluator, Object… values) ：与ValueAnimator 中的ofObject类似，都需要传入自定义的TypeEvaluator对象。
+* ofArgb(Object target, String propertyName, int… values)：用该方法实现将一个颜色动画渐变到另一个颜色，我们从中可以不断获取中间动画产生的颜色值。
+
+使用示例：
+
+![anim5](images/anim5.png)
+
+4.AnimatorSet	
+
+AnimatorSet继承自Animator。AnimatorSet表示的是动画的集合，我们可以通过AnimatorSet把多个动画集合在一起，让其串行或并行执行，从而创造出复杂的动画效果。
+
+假设anim1,anim2,anim3,anim4是四个已定义的ObjectAnimator动画对象，AnimatorSet可以使用三种方式进行动画组合()：
+
+```java
+//方式一
+  AnimatorSet animatorSet = new AnimatorSet();
+  animatorSet.playSequentially(anim1, anim2, anim4);
+  animatorSet.playTogether(anim2, anim3);
+  animatorSet.start();
+//方式二
+AnimatorSet anim23 = new AnimatorSet();
+  anim23.playTogether(anim2, anim3);
+  AnimatorSet animatorSet = new AnimatorSet();
+  animatorSet.playSequentially(anim1, anim23, anim4);
+  animatorSet.start();
+//方式三
+ AnimatorSet animatorSet = new AnimatorSet();
+  animatorSet.play(anim1).before(anim2);
+  animatorSet.play(anim2).with(anim3);
+  animatorSet.play(anim4).after(anim2);
+  animatorSet.start();
+```
 
 
 
