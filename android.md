@@ -67,6 +67,10 @@ onRestart()					  重启Activity时被调用，当Activity从不可见重新变�
 
 ![pic2](/images/activity2.png)
 
+**横竖屏切换时候activity的生命周期?** 
+A. 不设置Activity的android:configChanges时，切屏会重新调用各个生命周期，切横屏时会执行一次，切竖屏时会执行两次
+B. 设置Activity的android:configChanges="orientation"时，切屏还是会重新调用各个生命周期，切横、竖屏时只会执行一次
+C. 设置Activity的android:configChanges="orientation|keyboardHidden"时，切屏不会重新调用各个生命周期，只会执行onConfigurationChanged方法
 
 ## Activity的四种加载模式以及使用场景
 
@@ -173,6 +177,16 @@ public void onAttach(Activity activity){
 
 
 然后fragment在合适的地方就可以调用`mListener.onTest(str)` 
+
+Fragment与Activity通信，大概归纳为：
+
+**a、如果你Activity中包含自己管理的Fragment的引用，可以通过引用直接访问所有的Fragment的public方法**
+
+**b、如果Activity中未保存任何Fragment的引用，那么没关系，每个Fragment都有一个唯一的TAG或者ID,可以通过getFragmentManager.findFragmentByTag()或者findFragmentById()获得任何Fragment实例，然后进行操作。**
+
+**c、在Fragment中可以通过getActivity得到当前绑定的Activity的实例，然后进行操作。**
+
+注：如果在Fragment中需要Context，可以通过调用getActivity(),如果该Context需要在Activity被销毁后还存在，则使用getActivity().getApplicationContext()。
 
 ## Service
 
@@ -650,7 +664,7 @@ s.close();
 
 这种方法主要用于实现一些不规则的效果，需要通过绘制的方式实现，即重写onDraw方法，采用这种方式需要自己支持wrap_content，并且padding也要自己处理。
 
-**2.继承ViewGroup派生特殊的Layout**
+**2.继承ViewGroup派生特殊的Layout** 
 
 这种方法主要用于实现自定义的布局，当某种效果看起来很像几种View组合在一起的时候，可以采用这种方法，需要合适的处理ViewGroup的测量、布局这两个过程，并同时处理子元素的测量和布局过程。
 
@@ -666,11 +680,15 @@ s.close();
 
 ## View的绘制流程
 
+![view1](images/view1.png)
 
 
 
 
-## 自定义属性
+
+## 自定义View/ViewGroup
+
+一、自定义属性的声明与获取
 
 1.在value目录下创建自定义属性的xml，文件名随意起，比如attr.xml
 
@@ -679,6 +697,7 @@ s.close();
 <resources>
    <declare-styleable name="CircleView">
       <attr name="circle_color" format="color"/>
+  	  <attr name="circle_radius" format="dimension"/>
   	  /*****/
    </declare-styleable>
 </resources>
@@ -694,27 +713,134 @@ xmlns:app="http://schemas.android.com/apk.res-auto"
 <com.XXX.CircleView
     ...
     app:circle_color="@color/light_green"
+    app:circle_radius="5dp"
     ...
     />
 ```
 
-3.在View构造方法中解析自定义属性（使用TypedArray）
+3.在View构造方法中获取自定义属性（使用TypedArray）
 
 ```java
-
-      
+int Color mColor;
+int radius mRadius;
+//***** 
 public CircleView(Context context, AttributeSet attrs, int defStyleAttr){
    super(context, attrs, defStyleAttr);
-   TypedArray a = context.obtainStyledAttributes(attrs, R.styleable.CircleView);
-   mColor = a.getColor(R.styleable.CircleView+circle_color, Color.RED);
+     TypedArray a = context.getTheme().obtainStyledAttributes(attrs, R.styleable.CircleRotateView, defStyleAttr, 0);
+     //或使用这种方式：TypedArray a = context.obtainStyledAttributes(attrs, R.styleable.CircleView);
+  for(int i=0;i<a.getIndexCount();i++) {
+     int attr = typedArray.getIndex(i);
+     switch(attr){
+       case R.styleable.CircleView_circleColor:
+         mColor  = a.getColor(attr, Color.BLACK);
+         break;
+       case R.styleable.CircleView_circleWidth:
+         mRadius = a.getDimensionPixelSize(attr, 10);
+         break;
+         /****/   
+     }
+  }
    a.recycle();
    init();
 }
 ```
 
+二、测量onMeasure()
 
+在onMeasure()中对自定义View的宽高进行测量。
+
+MeasureSpec 代表测量规则，而它的手段则是用一个 int 数值来实现。一个 int 数值有 32 bit。MeasureSpec 将它的高 2 位用来代表测量模式 Mode，低 30 位用来代表数值大小 Size。通过`getMode()` 和 `getSize()` 可以逆向地将一个 measureSpec 数值解析出它的 Mode 和 Size。
+
+3种测量模式：
+
+* **MeasureSpec.EXACTLY** ：此模式说明可以给子元素一个精确的数值。当 layout_width 或者 layout_height 的取值为 **match_parent**  或者 明确的数值如 **100dp**  时，表明这个维度上的测量模式就是 MeasureSpec.EXACTLY。
+* **MeasureSpec.AT_MOST** ：该模式下，子 View 希望它的宽或者高由自己决定。ViewGroup 当然要尊重它的要求，但是也有个前提，那就是你不能超过我能提供的最大值，也就是它期望宽高不能超过父类提供的建议宽高。当一个 View 的 layout_width 或者 layout_height 的取值为**wrap_content**  时，它的测量模式就是 MeasureSpec.AT_MOST。
+* **MeasureSpec.UNSPECIFIED** ：此种模式表示无限制，子元素告诉父容器它希望它的宽高想要多大就要多大，你不要限制我。一般不需要处理这种情况，在 ScrollView 或者是 AdapterView 中都会处理这样的情况。所以可以在一般情形下忽视它。
+
+```java
+public void onMeasure(int widthMeasureSpec,int heightMeasureSpec){
+  int resultWidth,resultHeight;
+  int widthMode = MeasureSpec.getMode(widthMeasureSpec);
+        //测量得到的宽度
+        int widthSize = MeasureSpec.getSize(widthMeasureSpec);
+        int heightMode = MeasureSpec.getMode(heightMeasureSpec);
+        //测量的到的高度
+        int heightSize = MeasureSpec.getSize(heightMeasureSpec);
+  if(widthMode==MeasureSpec.EXACTLY){
+    resultWidth = widthSize;
+  }else{
+    //这里的MeasureSpec就是MeasureSpec.AT_MOST
+    //这里的widthSize就是父控件给的最大的大小，至多不能超过widthSize，这里只要把resultWidth设置为小于widthSize的值就可以。
+    resultWidth = widthSize/2;
+  }
+  //对于resultHeight可以进行类似的处理
+  
+  setMeasuredDimension(resultWidth,resultHeight);
+  
+  
+}
+```
+
+当需要动态改变自定义View的位置或大小时（如改变文本而引起的自定义view变化），应该调用`requestLayout()` 方法。requestLayout()方法会重新对自定义View进行测量和布局。
+
+`requestLayout()` 和`invalidate() ` 的区别如下：
+
+![view2](images/view2.jpg)
+
+三、布局onLayout()。（只有自定义ViewGroup需要这一步。自定义View不需要）
+
+1.决定子View的位置
+
+```java
+proceted void onLayout(boolean changed,int left,int top,int right,int bottom){
+  final int childrenCount = getChildCount();
+  for(int i=0;i<childrenCount;i++){
+    View childView = getChildAt(i);
+     cWidth = childView.getMeasuredWidth();  
+     cHeight = childView.getMeasuredHeight();  
+     cParams = (MarginLayoutParams) childView.getLayoutParams();  
+    if(child.getVisibility()==GONE){
+      continue;
+    }
+    //根据情况去计算childView 的左上角x坐标。
+    left = caculateChildLeft();//非原生可调函数
+    top = caculateChildTop();//计算childView的左上角的y坐标
+    child.layout(left,top,left+cWidth,top+cHeight);
+  }
+  
+  
+}
+```
+
+
+
+四、绘制onDraw()
+
+在`onDraw(Canvas canvas)中` 调用canvas的一系列API来绘制View：
+
+```
+canvas.drawXXX
+```
+
+对Canvas进行变换：平移`translate` ，旋转`rotate` ，缩放`scale` ，倾斜`skew` 等等。
+
+在运用这些变换的时候要注意使用`save()` 来保存犯罪现场，使用`restore()` 来恢复犯罪现场。  
+
+onDraw()中不建议进行`new` 操作，这样会减慢速度。
 
 ## Touch事件的传递机制
+
+```
+//只有ViewGroup能够调用该方法，如果返回true，则表示对该事件MotionEvent事件进行拦截，否则会传递给其子View来处理
+boolean onInterceptTouchEvent(MotionEvent ev)
+
+boolean onTouchEvent(MotionEvent event)
+
+
+onClickListener()
+
+
+```
 
 
 
@@ -811,9 +937,9 @@ ValueAnimator使用示例：
 * public static ValueAnimator ofArgb (int… values)：该方法接收一系列代表了颜色的int值，其内部使用了ArgbEvaluator，可以用该方法实现将一个颜色动画渐变到另一个颜色，我们从中可以不断获取中间动画产生的颜色值。
 * public static ValueAnimator ofObject (TypeEvaluator evaluator, Object… values):ValueAnimator提供了一个ofObject方法，该方法接收一个TypeEvaluator类型的参数，我们需要实现该接口TypeEvaluator的evaluate()方法，只要我们实现了TypeEvaluator接口，我们就能通过ofObject方法处理任意类型的数据。
 
-3.ObjectAnimator	
+  3.ObjectAnimator
 
-ObjectAnimator继承自ValueAnimator。要让属性动画渐变式地更改对象中某个属性的值，可分两步操作：第一步，动画需要计算出某一时刻属性值应该是多少；第二步，需要将计算出的属性值赋值给动画的属性。	
+  ObjectAnimator继承自ValueAnimator。要让属性动画渐变式地更改对象中某个属性的值，可分两步操作：第一步，动画需要计算出某一时刻属性值应该是多少；第二步，需要将计算出的属性值赋值给动画的属性。
 
 ValueAnimator只实现了第一步，也就是说ValueAnimator只负责以动画的形式不断计算不同时刻的属性值，但需要我们开发者自己写代码在动画监听器AnimatorUpdateListener的onAnimationUpdate方法中将计算出的值通过对象的setXXX等方法更新对象的属性值。ObjectAnimator比ValueAnimator更进一步它会自动调用对象的setXXX方法更新对象中的属性值。
 
