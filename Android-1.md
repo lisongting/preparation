@@ -1,4 +1,4 @@
-# 为面试做的一些准备
+# Android面试知识点归纳(1)
 
 > The Chance should be taked by the one who was ready !  
 
@@ -6,9 +6,37 @@
 
 持续更新中~~
 
+<h3 id="index">目录</h3>
 
+* [Android 系统架构](#Android系统架构)
 
-## Android 系统架构
+* [Activity 生命周期](#Activity生命周期)
+
+* [Activity的四种加载模式以及使用场景](#Activity的四种加载模式以及使用场景)
+
+* [如何理解Activity,View,Window三者之间的关系？](#如何理解Activity,View,Window三者之间的关系？)
+
+* [Activity与Fragment通信](#Activity与Fragment通信)
+
+* [Service](#Service)
+
+* [Binder机制](#Binder机制)
+
+* [IPC——跨进程通讯](#IPC——跨进程通讯)
+
+* [View的绘制流程](#View的绘制流程)
+
+* [自定义View和ViewGroup](#自定义View和ViewGroup)
+
+* [TouchEvent事件的传递机制](#TouchEvent事件的传递机制)
+
+* [Android中的三种动画](#Android中的三种动画)
+
+* [AIDL的使用](#AIDL的使用)
+
+* [应用程序Activity的启动过程](#应用程序Activity的启动过程)
+
+<h2 id="Android系统架构">Android 系统架构</h2>
 
 ![framework](images/framework.png)
 
@@ -45,7 +73,9 @@ HAL能以封闭源码的形式提供**硬件驱动模块**。其目的是把Andr
 
 Android是基于Linux内核，其核心系统服务如安全性、内存管理、进程管理、网路协议以及驱动模型都依赖于Linux内核。
 
-## Activity 生命周期
+[回到目录](#index)
+
+<h2 id="Activity生命周期">Activity生命周期</h2>
 
 在Activity的生命周期中，如下的方法会被系统回调：
 
@@ -70,9 +100,12 @@ onRestart()					  重启Activity时被调用，当Activity从不可见重新变�
 **横竖屏切换时候activity的生命周期?** 
 A. 不设置Activity的android:configChanges时，切屏会重新调用各个生命周期，切横屏时会执行一次，切竖屏时会执行两次
 B. 设置Activity的android:configChanges="orientation"时，切屏还是会重新调用各个生命周期，切横、竖屏时只会执行一次
-C. 设置Activity的android:configChanges="orientation|keyboardHidden"时，切屏不会重新调用各个生命周期，只会执行onConfigurationChanged方法
+C. 设置Activity的android:configChanges="orientation|keyboardHidden"时，切屏不会重新调用各个生命周期，只会执行onConfigurationChanged方法。
 
-## Activity的四种加载模式以及使用场景
+[回到目录](#index)
+
+
+<h2 id="Activity的四种加载模式以及使用场景">Activity的四种加载模式以及使用场景</h2>
 
 **standard 模式**
 
@@ -90,9 +123,10 @@ C. 设置Activity的android:configChanges="orientation|keyboardHidden"时，切�
 
 在一个新栈中创建该Activity的实例，并让多个应用共享该栈中的该Activity实例。一旦该模式的Activity实例已经存在于某个栈中，任何应用再激活该Activity时都会重用该栈中的实例( 会调用实例的 onNewIntent() )。其效果相当于多个应用共享一个应用，不管谁激活该 Activity 都会进入同一个应用中。使用场景如闹铃提醒，将闹铃提醒与闹铃设置分离。singleInstance不要用于中间页面，如果用于中间页面，跳转会有问题，比如：A -> B (singleInstance) -> C，完全退出后，在此启动，首先打开的是B。
 
+[回到目录](#index)
 
-## 如何理解Activity，View，Window三者之间的关系？
 
+<h2 id="如何理解Activity,View,Window三者之间的关系？">如何理解Activity，View，Window三者之间的关系？</h2>
 打个比方。Activity像一个工匠（控制单元），Window像窗户（承载模型），View像窗花（显示视图）LayoutInflater像剪刀，Xml配置像窗花图纸。
 
 1：Activity构造的时候会初始化一个Window，准确的说是PhoneWindow。
@@ -103,7 +137,9 @@ C. 设置Activity的android:configChanges="orientation|keyboardHidden"时，切�
 
 4：这些View的事件监听，是由WindowManagerService来接受消息，并且回调Activity函数。比如onClickListener，onKeyDown等。
 
-## Activity与Fragment通信
+[回到目录](#index)
+
+<h2 id="Activity与Fragment通信">Activity与Fragment通信</h2>
 
 1.Fragment从Activity获取数据
 
@@ -188,7 +224,9 @@ Fragment与Activity通信，大概归纳为：
 
 注：如果在Fragment中需要Context，可以通过调用getActivity(),如果该Context需要在Activity被销毁后还存在，则使用getActivity().getApplicationContext()。
 
-## Service
+[回到目录](#index)
+
+<h2 id="Service">Service</h2>
 
 创建自定义Service需要重写父类的如下方法：
 
@@ -233,7 +271,9 @@ Service生命周期图三：
 
 第一次绑定时会调用onCreate->onBind()。随后无论哪个组件再绑定几次该Service。服务A的onCreate()和onBind()只调用一次。
 
-## Binder机制
+[回到目录](#index)
+
+<h2 id="Binder机制">Binder机制</h2>
 
 [Linux](http://lib.csdn.net/base/linux)已经拥有的进程间通信IPC手段包括(Internet Process Connection)： 管道（Pipe）、信号（Signal）和跟踪（Trace）、插口（Socket）、报文队列（Message）、共享内存（Share Memory）和信号量（Semaphore）。
 
@@ -283,7 +323,9 @@ Binder工作机制
 
 ![binder3](images/binder3.PNG)
 
-## IPC——跨进程通讯
+[回到目录](#index)
+
+<h2 id="IPC——跨进程通讯">IPC——跨进程通讯</h2>
 
 ### Serializable接口
 
@@ -637,56 +679,17 @@ s.close();
 
 适用场景：**网络数据交换**
 
+[回到目录](#index)
 
-
----
-
-## Handler实现原理
-
-* Message
-
-* MessageQueue
-
-* Looper
-
-  ​
-
-  ​
-
-  ​
-
-
-## 自定义View 
-
-### 分类
-
-**1.继承View并重写onDraw()方法**
-
-这种方法主要用于实现一些不规则的效果，需要通过绘制的方式实现，即重写onDraw方法，采用这种方式需要自己支持wrap_content，并且padding也要自己处理。
-
-**2.继承ViewGroup派生特殊的Layout** 
-
-这种方法主要用于实现自定义的布局，当某种效果看起来很像几种View组合在一起的时候，可以采用这种方法，需要合适的处理ViewGroup的测量、布局这两个过程，并同时处理子元素的测量和布局过程。
-
-**3.继承特定的View（如TextView）**
-
-这种方法比较常见，一般用于扩展某种已知View的功能，不需要自己支持wrap_content和padding
-
-4.**继承特定的ViewGroup**（如RelativeLayout）
-
-这种方法也比较常见，采用这种方法不需要自己处理ViewGroup的测量和布局这两个过程，和2的主要差别在于方法2更接近View的底层。
-
-
-
-## View的绘制流程
+<h2 id="View的绘制流程">View的绘制流程</h2>
 
 ![view1](images/view1.png)
 
 
 
+[回到目录](#index)
 
-
-## 自定义View/ViewGroup
+<h2 id="自定义View和ViewGroup">自定义View和ViewGroup</h2>
 
 一、自定义属性的声明与获取
 
@@ -828,7 +831,10 @@ canvas.drawXXX
 
 onDraw()中不建议进行`new` 操作，这样会减慢速度。
 
-## Touch事件的传递机制
+[回到目录](#index)
+
+
+<h2 id="TouchEvent事件的传递机制">TouchEvent事件的传递机制</h2>
 
 ```
 //只有ViewGroup能够调用该方法，如果返回true，则表示对该事件MotionEvent事件进行拦截，否则会传递给其子View来处理
@@ -844,11 +850,9 @@ onClickListener()
 
 
 
+[回到目录](#index)
 
-
-
-
-## Android中的几种动画
+<h2 id="Android中的三种动画">Android中的三种动画</h2>
 
 ### 逐帧动画
 
@@ -980,9 +984,10 @@ AnimatorSet anim23 = new AnimatorSet();
   animatorSet.start();
 ```
 
+[回到目录](#index)
 
 
-## AIDL
+<h2 id="AIDL的使用">AIDL的使用</h2>
 
 Android Interface Defining Language，Android接口定义语言。引入AIDL目的是为了实现进程间通信，尤其是在涉及多进程并发情况下的进程间通信。
 
@@ -1081,9 +1086,10 @@ ServiceConnection conn = new ServiceConnection(){
 }
 ```
 
+[回到目录](#index)
 
 
-## 应用程序Activity的启动过程
+<h2 id="应用程序Activity的启动过程">应用程序Activity的启动过程</h2>
 
 有两种操作会引发Activity的启动，
 
@@ -1114,8 +1120,8 @@ Activity的启动过程是：
 6. ActivityManagerServic调用ApplicationThread.scheduleLaunchActivity接口，通知相应的进程执行启动Activity的操作；
 7. ApplicationThread把这个启动Activity的操作转发给ActivityThread，ActivityThread通过ClassLoader导入相应的Activity类，然后把它启动起来。
 
-## 热修复
 
+[回到目录](#index)
 
 
 
