@@ -833,22 +833,45 @@ onDraw()中不建议进行`new` 操作，这样会减慢速度。
 
 [回到目录](#index)
 
-
 <h2 id="TouchEvent事件的传递机制">TouchEvent事件的传递机制</h2>
 
-```
-//只有ViewGroup能够调用该方法，如果返回true，则表示对该事件MotionEvent事件进行拦截，否则会传递给其子View来处理
-boolean onInterceptTouchEvent(MotionEvent ev)
+点击事件的分发与以下几个方法相关：
 
-boolean onTouchEvent(MotionEvent event)
+* `public boolean dispathchTouchEvent(MotionEvent event)` 
+* `public boolean onInterceptTouchEvent(MotionEvent event)` 
+* `public boolean onTouchEvent(MotionEvent event) ` 
+
+![view3](images/view3.png)
+
+只有ViewGroup才能对事件进行拦截：
+
+![view4](images/view4.png)
 
 
-onClickListener()
 
+如果Activity的所有子View都不处理事件，则最后会调用Activity的onTouchEvent():
 
-```
+![view5](images/view5.png)
 
+如果在最底层View处理：
 
+![view6](images/view6.png)
+
+如果在中途View处理了该事件，则不会继续向下进行事件分发：
+
+![view7](images/view7.png)
+
+当一个View需要处理某个事件时，如果设置了OnTouchListener，则OnTouchListener中的`onTouch()` 方法会先调用，返回true则代表处理完成，就不会再交给`onTouchEvent()` 了。如果在`onTouch()`中返回false，表示没有处理该事件，则才会调用`onTouchEvent()` ，在onTouchEvent()中，如果设置有OnClickListener，那么它的`onClick()` 会被调用。优先级：onTouchListener-->onTouchEvent()-->OnClickListener。
+
+**同一事件序列只能被一个View拦截并消耗** 。一个事件序列是指从手指触碰到屏幕的一瞬间，到手指离开屏幕的那一段时间，在这个过程中产生的一系列事件，这个事件序列以`ACTION_DOWN` 开始，中间含有若干的`ACTION_MOVE` 事件，最终以`ACTION_UP` 事件结束。
+
+某个View一旦决定拦截事件，那么一个事件序列都只能由它处理，并且后续它的`onInterceptTouchEvent()` 将不会被调用。因为一旦某个View决定要拦截，系统不会再次问它是否要拦截了，即`onInterceptTouchEvent()` 不再调用。
+
+某个View一旦开始处理事件，如果他不消耗ACTION_DOWN事件(`onTouchEvent()` 返回false)，那么同一事件序列中的其他事件都不会交给它处理，而是重新交给它的父元素去处理，即父View的`onTouchEvent()` 会被调用。
+
+事件传递过程：事件最先传递到Activity，Activity会把事件分发的具体工作交给**PhoneWindow** 来做(PhoneWindow是用来控制顶级View的外观和行为策略的)，而PhoneWindow又将事件传递给了顶级的**DecorView** （DecorView继承自FrameLayout），然后这个DecorView会将事件进行向下分发，分发给其子ViewGroup和View等，然后在子ViewGroup中会进行`dispatchTouchEvent()`依次往下分发， --> 判断是否拦截 `onInterceptTouchEvent()` -->如果拦截则处理:`onTouchEvent()` ，如果不拦截则继续往下分发。
+
+**最底层的View没有 `dispatchTouchEvent()` 方法，它只可以选择对事件进行处理或者不处理** 。
 
 [回到目录](#index)
 
