@@ -142,7 +142,37 @@ Handler的sendMessage()函数：
 
 ![handler9](images/handler9.png)
 
-## Android内存泄露及管理 
+Message 的callback成员变量实际上是一个**Runnable对象** ：
+
+`Runnable callback; ` 
+
+经常使用的Handler的`post(Runnable r)` 方法，源码是这样的：
+
+```java
+
+    public final boolean post(Runnable r)
+    {
+       return  sendMessageDelayed(getPostMessage(r), 0);
+    }
+```
+
+其中，`getPostMessage(r) ` 为：
+
+```java
+private static Message getPostMessage(Runnable r) {
+        Message m = Message.obtain();
+        m.callback = r;
+        return m;
+    }
+```
+
+原来，Handler的`post()`方法实际上是把这个Runnable对象封装到了一个Message中的。
+
+因此，Handler中的事件处理优先级顺序是：
+
+Message.callback(Runnable) -- >  mCallback(Callback接口实现类或Callback匿名内部类)  --->  Handler或其子类的handleMessage()。
+
+
 
 
 
