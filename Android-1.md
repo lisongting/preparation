@@ -279,37 +279,66 @@ Service生命周期图三：
 
 而Android采用的是Binder。**Binder基于Client-Server通信模式，传输过程只需一次拷贝，为发送发添加UID/PID身份，既支持实名Binder也支持匿名Binder，安全性高。**
 
+### 1.从进程角度看IPC机制：![binder5](images/binder5.png)
 
+Linux中，为了保证内核安全，用户空间不能直接操作内核，从而将进程分为**用户空间和内核空间** 。对于用户空间，不同进程之间是不能彼此共享的，而对于内核空间，不同进程是可以共享的。在Binder机制中，Client进程向Server进程通信，本质上就是利用**内核空间可共享的原理** 。
 
-Binder是Android中的一个类，它实现了IBinder接口，从IPC角度来说，Binder是Android中跨进程通讯的一种方式，Binder还可以理解为一种虚拟设备，它的设备驱动是/dev/binder，从Android Framework的角度来说，Binder是ServiceManager连接各种Manager(ActivityManager，WindowManager等等)的桥梁。从Android应用层来说，Binder是客户端与服务端进行通信的媒介，当bindService的时候，服务端就返回一个包含服务端业务的Binder对象， 通过这个Binder对象，客户端就可以获取**服务端提供的服务或者数据**，这里的服务包括普通服务和基于AIDL的服务。
+### 2.Binder原理： 
 
-Binder框架定义了四个角色：Server，Client，ServiceManager（以后简称SMgr）以及Binder驱动。其中Server，Client，SMgr运行于用户空间，驱动运行于内核空间。
+Binder通信采用客户端/服务端的架构，Binder定义了四个角色：Server，Client，ServiceManager（简称SMgr）以及Binder驱动。其中Server，Client，SMgr运行于用户空间，驱动运行于内核空间。
+
+### Binder机制包括以下五个部分：
+
+- Binder驱动
+
+  Binder驱动的核心是**维护一个binder_proc类型的链表** 。里面记录了包括ServiceManager在内的所有Client信息，当Client去请求得到某个Service时，Binder驱动就去binder_proc中查找相应的Service返回给Client，同时增加当前Service的引用个数。
+
+- Service Manager
+
+  ​	Service Manager主要**负责管理Android系统中所有的服务** ，当客户端要与服务端进行通信时，首先就会通过Service Manager来查询和取得所需要交互的服务。每个服务需要向Service Manager注册自己提供的服务。
+
+- 服务端
+
+  ​	通常是Android的系统服务，通过Service Manager可以查询和获取到某个Server。
+
+- 客户端
+
+  ​	一般指Android系统上的应用程序，它可以向ServiceManager请求Server中的服务，常见的客户端是Activity。
+
+- 服务代理
+
+  ​	服务代理是指**在客户端应用程序中生成的Server代理** (Proxy)，从应用程序的角度看，代理对象和本地对象没有差别，都可以调用其方法，方法都是同步的，并且返回相应的结果。服务代理也是Binder机制的核心模块。
+
+![binder6](images/binder6.png)
+
+Binder是Android中的一个类，它实现了IBinder接口，从Android应用层来说，Binder是**客户端与服务端进行通信的媒介**(代理)，当bindService的时候，服务端就返回一个包含服务端业务的Binder对象， 通过这个Binder对象，客户端就可以获取**服务端提供的服务或者数据**，这里的服务包括普通服务和基于AIDL的服务。
+
+### 3.Binder通讯流程
+
+![binder3](images/binder3.PNG)
 
 Binder工作机制
 
 ![binder4](images/binder4.png)
 
-### Binder机制包括以下五个部分：
+### Binder实例分析 
 
-* Binder驱动
+一个跨进程调用系统服务的简单例子：
 
-  ​Binder驱动的核心是维护一个binder_proc类型的链表。里面记录了包括ServiceManager在内的所有Client信息，当Client去请求得到某个Service时，Binder驱动就去binder_proc中查找相应的Service返回给Client，同时增加当前Service的引用个数。
+```java
+//获取WindowManager服务
+WindowManager wm = (WindowManager)getSystemService(getApplicationContext().WINDOW_SERVICE);
+//使用LayoutInflater生成一个View对象
+View view = LayoutInflater.from(getApplicaiton()).inflate(R.layout.view,null);
+//添加iew
+wm.addView(view,layoutParams);
+```
 
-* Service Manager
+这个过程分为三个步骤：
 
-  ​	Service Manager主要负责管理Android系统中所有的服务，当客户端要与服务端进行通信时，首先就会通过Service Manager来查询和取得所需要交互的服务。每个服务需要向Service Manager注册自己提供的服务。
-
-* 服务端
-
-  ​	通常是Android的系统服务，通过Service Manager可以查询和获取到某个Server。
-
-* 客户端
-
-  ​	一般指Android系统上的应用程序，它可以请求Server中的服务，常见的客户端是Activity。
-
-* 服务代理
-
-  ​	服务代理是指在客户端应用程序中生成的Server代理(Proxy)，从应用程序的角度看，代理对象和本地对象没有差别，都可以调用其方法，方法都是同步的，并且返回相应的结果。服务代理也是Binder机制的核心模块。
+* 注册服务：在Android开机启动的过程中，Android会初始化系统地各种Service，并将这些Service向ServiceManager注册（即让ServiceManager管理）。这一步是系统自动完成的。
+* 获取服务：客户端想要得到具体的Service直接向ServiceManager要即可。客户端首先向ServiceManager查询得到具体的Service引用，通常是Service引用的代理对象，对数据进行一些处理操作。在`getSystemService()` 过程中得到的wm是WindowManager对象的引用。
+* 使用服务：通过这个引用向具体的服务端发送请求，服务端执行完成后就返回。对于WindowManager的`addView`函数，将触发远程调用，调用的是运行在systemServer进程中的WindowManager的addView函数。
 
 **Binder系统架构图**:
 
@@ -319,9 +348,9 @@ Binder工作机制
 
 ![binder2](/images/binder2.png)
 
-**Binder通讯流程**
+****
 
-![binder3](images/binder3.PNG)
+
 
 [回到目录](#index)
 
