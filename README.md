@@ -16,5 +16,5 @@ Java常考知识点：[Java](Java.md)
 
 操作系统：[OperatingSystem](/OperatingSystem.md)
 
-数据库：[SQL.md](/SQL.md)  （还没开始做）
+数据库：[SQL](/SQL.md)  （还没开始做）
 
