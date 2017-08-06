@@ -1,9 +1,9 @@
 # preparation
-这里是一些知识点归纳，为面试做准备。
+这里是一些知识点归纳。
 
 Android面试常考知识点归纳：
 
-* [Android-1.md](/Android-1.md)
+* [Android-1](/Android-1.md)
 * [Android-2](/Android-2.md)
 
 数据结构知识点：[Algorithm](/Algorithm.md)
