@@ -6,7 +6,7 @@ Android面试常考知识点归纳：
 * [Android-1](/Android-1.md)
 * [Android-2](/Android-2.md)
 
-数据结构知识点：[Algorithm](/Algorithm.md)
+数据结构知识点：[DataStructure&Algorithm](/DataStructure&Algorithm.md)
 
 计算机网络：[Network](/Network.md)
 
