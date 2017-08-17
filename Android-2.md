@@ -1,11 +1,12 @@
-# Android面试知识点归纳(2) 
+# Android面试知识点归纳(2)
 
 <h3 id="index">目录</h3>
 
 * [Handler原理](#Handler原理)
 * [内存泄露以及优化](#内存泄露以及优化)
-
-
+* JVM虚拟机/Dalvik/ART(#JVM虚拟机/Dalvik/ART)
+* 热修复
+* OKHtttp源码
 
 
 
@@ -30,7 +31,7 @@ APP的内存限制机制：
 * Android是使用分时复用的方式，可以多个应用同时运行，在前台与用户交互的只有一个，在后台运行的可以有多个。APP切换时是采用**LRU** (Least recently used,最近最少使用) 方式，最近使用的排在最前面，被清理的可能性最小。排在末尾的最有可能被清理。
 * 当系统清理后台进程时，会触发Activity 的 `onTrimMemory()` 方法。
 
-### APP内存优化方法 
+### APP内存优化方法
 
 1.对于生命周期比Activity长的对象如果需要应该使用ApplicationContext。
 
@@ -60,7 +61,7 @@ Activity的`onTrimMemory(int level)` ，level有以下几个常量值：
 * TRIM_MEMORY_MODERATE：表示当前应用处于LRU的中部，内存紧张时还暂时不会KILL该进程。
 * TRIM_MEMORY_RUNNING_MODERATE：表示应用程序正常运行，并且不会被杀掉。但是目前手机的内存已经有点低了，系统可能会开始根据LRU缓存规则来去杀死进程了。
 * TRIM_MEMORY_RUNNING_LOW ：表示应用程序正常运行，并且不会被杀掉。但是目前手机的内存已经非常低了，我们应该去释放掉一些不必要的资源以提升系统的性能，同时这也会直接影响到我们应用程序的性能。
-* TRIM_MEMORY_RUNNING_CRITICAL：表示应用程序仍然正常运行，但是系统已经根据LRU缓存规则杀掉了大部分缓存的进程了。这个时候我们应当尽可能地去释放任何不必要的资源，不然的话系统可能会继续杀掉所有缓存中的进程，并且开始杀掉一些本来应当保持运行的进程，比如说后台运行的服务。 
+* TRIM_MEMORY_RUNNING_CRITICAL：表示应用程序仍然正常运行，但是系统已经根据LRU缓存规则杀掉了大部分缓存的进程了。这个时候我们应当尽可能地去释放任何不必要的资源，不然的话系统可能会继续杀掉所有缓存中的进程，并且开始杀掉一些本来应当保持运行的进程，比如说后台运行的服务。
 * TRIM_MEMORY_UI_HIDDEN：点击了Home键之后，会收到这个级别的通知。
 
 
@@ -69,7 +70,7 @@ Activity的`onTrimMemory(int level)` ，level有以下几个常量值：
 
 <h2 id="Handler原理">Handler原理</h2>
 
-### ThreadLocal 
+### ThreadLocal
 
 ThreadLocal是一个**线程内部的数据存储类** ，实质上是一个泛型类，定义为：public class ThreadLocal<T>。通过它可以在某个指定线程中存储数据，数据存储以后，只有在**指定线程(存储数据的线程)** 中可以获取到它存储的数据，对于其他的线程来说无法获取到它的数据。
 
@@ -93,9 +94,9 @@ ThreadLocalMap的`getEntry()` 方法:
 
 i的值是由线程的哈希码和（table的长度-1）进行“按位与”运算，所有每个线程得到的i是不一样的，因此最终数据副本在table中的位置也不一样。
 
-### MessageQueue 
+### MessageQueue
 
-MessageQueue主要包含两个操作，插入和读取。读取操作的函数是`next()` ，该操作同时也会伴随着删除操作(相当于出队列)，插入操作对应的函数是`enqueueMessage()` ，`enqueueMessage()` 实际上就是单链表的插入操作。`next()` 方法是一个无限循环的方法，如果消息队列中没有消息，那么next()方法会一直阻塞。当有新消息到来时，next()方法会返回这条消息并将其从单链表中移除。 
+MessageQueue主要包含两个操作，插入和读取。读取操作的函数是`next()` ，该操作同时也会伴随着删除操作(相当于出队列)，插入操作对应的函数是`enqueueMessage()` ，`enqueueMessage()` 实际上就是单链表的插入操作。`next()` 方法是一个无限循环的方法，如果消息队列中没有消息，那么next()方法会一直阻塞。当有新消息到来时，next()方法会返回这条消息并将其从单链表中移除。
 
 ### Looper
 
@@ -123,7 +124,7 @@ Looper主要作用：
 1、	与当前线程绑定，保证一个线程只会有一个Looper实例，同时一个Looper实例也只有一个MessageQueue。
 2、	loop()方法，不断从MessageQueue中去取消息，交给消息的target属性的dispatchMessage去处理。
 
-### Handler 
+### Handler
 
 Handler的工作主要是消息的发送和消息接收处理。消息的发送可以通过Handler的`post()` 方法或者`sendMessage()` 方法来实现，消息的处理，需要我们重写handleMessage()函数来进行处理。
 
@@ -144,7 +145,7 @@ Handler的sendMessage()函数：
 
 Message 的callback成员变量实际上是一个**Runnable对象** ：
 
-`Runnable callback; ` 
+`Runnable callback; `
 
 经常使用的Handler的`post(Runnable r)` 方法，源码是这样的：
 
@@ -178,15 +179,122 @@ Message.callback(Runnable) -- >  mCallback(Callback接口实现类或Callback匿
 
 [回到目录](#index)
 
-##  
+<h2 id="JVM/Davik/ART">JVM/Davik/ART</h2>
+### JVM
+JAVA程序的执行过程：
+* 首先，.java文件经过Java编译器，被编译成字节码文件（.class文件），Java编译器在这个编译过程中做的任务有：语法分析、语义分析、字节码生成等。
+* 字节码文件在执行前，先经过类加载机制（加载、连接、初始化）
+* 在执行时，字节码文件经过Java虚拟机来执行，Java虚拟机在这个过程中做的工作有：为代码进行机器相关优化和非机器相关的优化，寄存器分配，生成目标代码。
+
+![jvm1](images/jvm1.png)
+
+当启动一个java程序时，一个虚拟机实例就诞生了，当程序结束时，这个虚拟机实例也消亡。
+
+Java虚拟机包含一个类加载器（class loader），它可以从程序和API中加载class文件，Java API中只有程序执行时需要的类才会加载。
+![jvm2](images/jvm2.png)
+
+
+Java虚拟机数据类型：
+![jvm3](images/jvm3.png)
+包括两类数据类型：
+* 基本类型：char ,byte,short,int ,long,float,double,boolean,还有一个**returnAddress** ，returnAddress 数据类型被用来实现Java程序中的finally 字句，它的值执行一条虚拟机指令的操作码。比如，在一段代码中，一个`try` 包含了两个`catch` 块，returnAddress是用来标记fanally块执行完后返回的位置，如果后面不使用returnAddress，则finally块执行完就不知道要返回到哪里了。
+* 引用类型：类类型，接口类型，数组类型。
+
+#### JVM体系结构：
+![jvm4](images/jvm4.png)
+1.class文件：包含了关于类或接口的所有信息，class文件的基本类型如下：
+u1 ：代表1个字节，无符号类型
+u2 ：代表2个字节，无符号类型
+u4 ：代表4个字节，无符号类型
+u8 ：代表8个字节，无符号类型
+
+class文件内容包括：
+```
+ClassFile {
+
+    u4 magic;                                     //魔数：0xCAFEBABE，用来判断是否是Java class文件
+    u2 minor_version;                             //次版本号
+    u2 major_version;                             //主版本号
+    u2 constant_pool_count;                       //常量池大小
+    cp_info constant_pool[constant_pool_count-1]; //常量池
+    u2 access_flags;                              //类和接口层次的访问标志（通过|运算得到）
+    u2 this_class;                                //类索引（指向常量池中的类常量）
+    u2 super_class;                               //父类索引（指向常量池中的类常量）
+    u2 interfaces_count;                          //接口索引计数器
+    u2 interfaces[interfaces_count];              //接口索引集合
+    u2 fields_count;                              //字段数量计数器
+    field_info fields[fields_count];              //字段表集合
+    u2 methods_count;                             //方法数量计数器
+    method_info methods[methods_count];           //方法表集合
+    u2 attributes_count;                          //属性个数
+    attribute_info attributes[attributes_count];  //属性表
+
+}
+```
+
+2.类加载器子系统包括四种加载器：
+* Bootstrap ClassLoader 启动类加载器
+* Extension ClassLoader 扩展类加载器
+* Application ClassLoader 应用程序类加载器
+* User ClassLoader 自定义类加载器
+
+加载：将类的class文件读入内存中，并为之创建一个java.lang.Class对象
+连接：负责把类的二进制数据合并到JRE
+初始化：主要是对类变量的初始化。
+
+3.方法区（常量池是在方法区里的！！）
+JVM将关于类/接口的一系列信息都存放在了方法区里，方法区中存放了以下信息：
+* 类/接口的全限定名（如java.lang.Object这样的）
+* 类的直接父类的全限定名
+* 这个class文件是**类**还是**接口**
+* 访问修饰符
+* 常量池：包括直接常量(字符串，整型，和浮点常量等)和对其他类型、字段方法的符号引用。
+* 字段信息（字段名，类型，修饰符）
+* 方法信息（方法名，修饰符，返回类型，参数数量和类型）
+* 除了常量以外的所有类的静态变量
+
+
+4.堆
+Java程序在运行时创建的所有类实例或数组，都放在同一个堆中，由于一个进程（也就是一个JVM实例）只有一个堆空间，因此所有线程共用这个堆空间。Java虚拟机中只有一条在堆中分配对象的指令，却没有释放内存的指令，因为这正是垃圾回收器需要做的事情：回收内存。
+（1）存储的全部是对象的实例，每个对象都包含一个与之对应的class的信息。（class的目的是得到操作指令）。
+（2）每个jvm实例只有一个堆区（heap）被所有线程共享，堆中不存放基本类型和引用型变量，只存放**对象实例**本身。
+
+5.栈
+每当启动一个线程，JVM就会给它分配一个Java栈，Java栈由许多栈帧组成，当线程调用一个Java方法时，虚拟机压入新的栈帧到该线程的Java栈中，当方法返回时，这个栈帧就从Java栈中弹出来。Java虚拟机没有寄存器，其指令集使用Java栈来存储中间数据，这样设计的原因是为了保持Java虚拟机的指令集尽量紧凑。
+
+
+6.程序记数器
+每一个线程都有它的程序计数器，程序计数器也叫PC寄存器，程序计数器既能持有一个本地指针，也能持有一个returnAddress。当线程执行某个Java方法时，程序计数器的值总是下一条被执行指令的地址。这里的地址可以是一个本地指针，也可以是方法字节码中相对该方法起始指令的偏移量。如果该线程正在执行一个本地方法，那么此时程序计数器的值是“undefined”。
+
+
+7.本地方法栈
+任何本地方法接口都会使用某种本地方法栈。当线程调用Java方法时，虚拟机会创建一个新的栈帧并压入Java栈。当它调用的是本地方法（native method）时，虚拟机会保持Java栈不变，不再在线程的Java栈中压入新的栈帧，JVM只是简单地动态连接并直接调用指定的本地方法。
+
+其中方法区和堆由该虚拟机实例中所有线程共享。当虚拟机装载一个class文件时，它会从这个class文件包含的二进制数据中解析类型信息，然后把这些类型信息放到方法区。当程序运行时，虚拟机会把所有该程序在运行时创建的对象放到堆中。
+
+像其它运行时内存区一样，本地方法栈占用的内存区可以根据需要动态扩展或收缩。
+
+#### 执行引擎
+在Java虚拟机规范中，执行引擎的行为使用指令集定义。实现执行引擎的设计者将决定如何执行字节码，实现可以采取解释、即时编译或直接使用芯片上的指令执行，还可以是它们的混合。
+
+执行引擎可以理解成一个抽象的规范、一个具体的实现或一个正在运行的实例。抽象规范使用指令集规定了执行引擎的行为。具体实现可能使用多种不同的技术--包括软件方面、硬件方面或树种技术的结合。作为运行时实例的执行引擎就是一个线程。
+
+运行中Java程序的每一个线程都是一个独立的虚拟机执行引擎的实例。从线程生命周期的开始到结束，它要么在执行字节码，要么执行本地方法。
+
+#### 本地方法接口
+Java本地接口，也叫JNI（Java Native Interface），是为可移植性准备的。本地方法接口允许本地方法完成以下工作：
+* 传递或返回数据
+* 操作实例变量
+* 操作类变量或调用类方法
+* 操作数组
+* 对堆的对象加锁
+* 装载新的类
+* 抛出异常
+* 捕获本地方法调用Java方法抛出的异常
+* 捕获虚拟机抛出的异步异常
+* 指示垃圾收集器某个对象不再需要
 
 
 
-
-
-
-
-
-
-## 热修复 
-
+[回到目录](#index)
+## 热修复

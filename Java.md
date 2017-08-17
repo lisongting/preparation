@@ -4,8 +4,8 @@
 
 ## 面向对象的特征
 
-- **抽象**：抽象是将一类对象的共同特征总结出来构造类的过程，包括数据抽象和行为抽象两方面。抽象只关注对象有哪些属性和行为，并不关注这些行为的细节是什么。 
-- **继承**：继承是**从已有类得到继承信息创建新类的过程**。提供继承信息的类被称为父类(超类、基类);得到继承信息的类被称为子类(派生类)。继承让变化中的软件系统有了一定的延续性，同时继承也是封装程序中可变因素的重要手段。 
+- **抽象**：抽象是将一类对象的共同特征总结出来构造类的过程，包括数据抽象和行为抽象两方面。抽象只关注对象有哪些属性和行为，并不关注这些行为的细节是什么。
+- **继承**：继承是**从已有类得到继承信息创建新类的过程**。提供继承信息的类被称为父类(超类、基类);得到继承信息的类被称为子类(派生类)。继承让变化中的软件系统有了一定的延续性，同时继承也是封装程序中可变因素的重要手段。
 - **封装**：通常认为封装是**把数据和操作数据的方法绑定起来，对数据的访问只能通过已定义的接口**。面向对象的本质就是将现实世界描绘成一系列完全自治、封闭的对象。我们在类中编写的方法就是对实现细节的一种封装;我们编写一个类就是对数据和数据操作的封装。可以说，封装就是隐藏一切可隐藏的东西，只向外界提供最简单的编程接口。
 - **多态性**：多态性是指**允许不同子类型的对象对同一消息作出不同的响应**。简单的说就是用同样的对象引用调用同样的方法但是做了不同的事情。多态性分为编译时的多态性和运行时的多态性。**方法重载**(overload)实现的是**编译时的多态性**(也称为前绑定)，而**方法重写**(override)实现的是**运行时的多态性**(也称为后绑定)。运行时的多态是面向对象最精髓的东西，要实现多态需要做两件事：1). 方法重写(子类继承父类并重写父类中已有的或抽象的方法);2). 对象造型(用父类型引用引用子类型对象，这样同样的引用调用同样的方法就会根据子类对象的不同而表现出不同的行为)。
 
@@ -94,7 +94,7 @@ Runtime.getRuntime().gc()
 
  根据程序运行状况以及堆的使用状况，自动选一种合适的垃圾回收算法。这样可以不局限与一种垃圾回收算法。
 
-## 访问修饰符public,private,protected,以及不写(默认)时的区别? 
+## 访问修饰符public,private,protected,以及不写(默认)时的区别?
 
 ```java
 修饰符    当前类  同 包  子 类    其他包
@@ -114,7 +114,7 @@ byte：1字节  boolean：1字节
 
 short：2字节   char：2字节    
 
-int ：4字节   float：4字节 
+int ：4字节   float：4字节
 
 long：8字节   double：8字节
 
@@ -124,13 +124,13 @@ long：8字节   double：8字节
 
 ## int 和Integer
 
-Java是一个近乎纯洁的面向对象编程语言，但是为了编程的方便还是引入了基本数据类型，但是为了能够将这些基本数据类型当成对象操作，Java为每一个基本数据类型都引入了对应的包装类型(wrapper class)，int的包装类就是Integer，从Java 5开始引入了自动装箱/拆箱机制，使得二者可以相互转换。 
+Java是一个近乎纯洁的面向对象编程语言，但是为了编程的方便还是引入了基本数据类型，但是为了能够将这些基本数据类型当成对象操作，Java为每一个基本数据类型都引入了对应的包装类型(wrapper class)，int的包装类就是Integer，从Java 5开始引入了自动装箱/拆箱机制，使得二者可以相互转换。
 
-Java 为每个原始类型提供了包装类型： 
+Java 为每个原始类型提供了包装类型：
 
-原始类型: boolean，char，byte，short，int，long，float，double 
+原始类型: boolean，char，byte，short，int，long，float，double
 
-包装类型：Boolean，Character，Byte，Short，Integer，Long，Float，Double 
+包装类型：Boolean，Character，Byte，Short，Integer，Long，Float，Double
 
 ```java
 Integer f1 = 100, f2 = 100, f3 = 150, f4 = 150;
@@ -146,16 +146,16 @@ System.out.println(f3 == f4);//false
 
 **每一个Java应用都唯一对应一个JVM实例，每一个实例唯一对应一个堆。每个线程包含一个栈区**。
 
-1.**栈** 
+1.**栈**
 
 （1）栈中只保存**基础数据类型的对象** 和**自定义对象的引用型数据**，对象都存放在堆区中。
-（2）每个栈中的数据（原始类型和对象引用）都是**线程私有**的，其他栈不能访问。 
-（3）栈分为3个部分：基本类型变量区、执行环境上下文、操作指令区（存放操作指令）。 
+（2）每个栈中的数据（原始类型和对象引用）都是**线程私有**的，其他栈不能访问。
+（3）栈分为3个部分：基本类型变量区、执行环境上下文、操作指令区（存放操作指令）。
 （4）stack的区域很小，只有1M，特点是存取速度很快，所以在stack中存放的都是快速执行的任务，比如static变量，static方法，基本数据类型的数据，和对象的引用(reference)。
 
 2.**堆**
 
-（1）存储的全部是对象的实例，每个对象都包含一个与之对应的class的信息。（class的目的是得到操作指令）。 
+（1）存储的全部是对象的实例，每个对象都包含一个与之对应的class的信息。（class的目的是得到操作指令）。
 （2）每个jvm实例只有一个堆区（heap）被所有线程共享，堆中不存放基本类型和引用型变量，只存放**对象实例**本身。
 
 3.**方法区**
@@ -166,9 +166,9 @@ System.out.println(f3 == f4);//false
 
 4.**常量池**
 
-**常量池是方法区的一部分。** 
+**常量池是方法区的一部分。**
 
-**常量池**用于存放**编译期生成的** 各种**字面量**和**符号引用（还有翻译出来的直接引用）**，这部分内容**在类加载后进入方法区** 的运行时常量池中存放。 
+**常量池**用于存放**编译期生成的** 各种**字面量**和**符号引用（还有翻译出来的直接引用）**，这部分内容**在类加载后进入方法区** 的运行时常量池中存放。
 
 常量池指的是在编译期被确定，并被保存在已编译的.class文件中的一些数据。除了包含代码中所定义的各种基本类型（如int、long等等）和对象型（如String及数组）的常量值(final)还包含一些**以文本形式出现的符号引用**，比如：**类和接口的全限定名； 字段的名称和描述符； 方法和名称和描述符**。
 
@@ -190,7 +190,7 @@ System.out.println(f3 == f4);//false
 
 * bootstrapClassLoader :主要加载java核心api
 * ExtClassLoaders：扩展类的类加载器
-* AppClassLoader ：程序类加载器
+* AppClassLoader ：程序类加载器，负责加载classpath 中指定的jar包及目录中的class
 * 用户继承ClassLoader重写的类加载器
 
   ​
@@ -287,7 +287,7 @@ class Father implements Cloneable {
         this.age = age;  
     }    
 }  
-  
+
 public class Child implements Cloneable {  
     public String name;  
     public int age;  
@@ -306,7 +306,7 @@ public class Child implements Cloneable {
         }  
         return child;  
     }  
-  
+
    public static void main(String[] args) {  
         Father father = new Father("李刚", 44);  
         Child child1 = new Child("李小刚", 14, father);  
@@ -333,15 +333,15 @@ public class Child implements Cloneable {
 
 ```java
 class Father implements Cloneable {  
-      
+
     public String name;  
     public int age;  
-      
+
     public Father(String name, int age) {  
         this.name = name;  
         this.age = age;  
     }  
-      
+
     public Object clone() {  
         Father father = null;  
         try {  
@@ -351,9 +351,9 @@ class Father implements Cloneable {
         }  
         return father;  
     }  
-    
+
 }  
-  
+
 public class Child implements Cloneable {   
     private String name;  
     private int age;  
@@ -399,7 +399,7 @@ public static void main(String[] args) {
 
 ## 日期和时间
 
-1.**如何取得年月日、小时分钟秒?** 
+1.**如何取得年月日、小时分钟秒?**
 
 ```java
 Calendar cal = Calendar.getInstance();
@@ -409,7 +409,7 @@ System.out.println(cal.get(Calendar.DATE));
 System.out.println(cal.get(Calendar.HOUR_OF_DAY));
 System.out.println(cal.get(Calendar.MINUTE));
 System.out.println(cal.get(Calendar.SECOND));
-		
+
 // Java 8
 LocalDateTime dt = LocalDateTime.now();
 System.out.println(dt.getYear());
@@ -433,17 +433,17 @@ System.currentTimeMillis();
 Clock.systemDefaultZone().millis(); // Java 8
 ```
 
-3.**如何取得某月的最后一天?** 
+3.**如何取得某月的最后一天?**
 
 ```java
 Calendar time = Calendar.getInstance();
 time.getActualMaximum(Calendar.DAY_OF_MONTH);
 ```
 
-4.**如何格式化日期?** 
+4.**如何格式化日期?**
 
 ```java
-SimpleDateFormat dataFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss"); 
+SimpleDateFormat dataFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 Date date1 = new Date();
 System.out.println(dataFormat.format(date1));
 ```
@@ -456,8 +456,8 @@ System.out.println(dataFormat.format(date1));
 
 ![thread](images/thread.jpg)
 
-1.新建状态(New)： 
-​        当用new操作符创建一个线程时， 例如new Thread(r)，线程还没有开始运行，此时线程处在新建状态。 
+1.新建状态(New)：
+​        当用new操作符创建一个线程时， 例如new Thread(r)，线程还没有开始运行，此时线程处在新建状态。
 2.就绪状态(Runnable)
 ​       一个新创建的线程并不自动开始运行，要执行线程，必须调用线程的start()方法。当线程对象调用start()方法即启动了线程，start()方法创建线程运行的系统资源，并调度线程运行run()方法。当start()方法返回后，线程就处于就绪状态。
 ​        处于就绪状态的线程并不一定立即运行run()方法，线程还必须同其他线程竞争CPU时间，**只有获得CPU时间才可以运行线程** 。因为在单CPU的计算机系统中，不可能同时运行多个线程，一个时刻仅有一个线程处于运行状态。因此此时可能有多个线程处于就绪状态。对多个处于就绪状态的线程是由[Java](http://lib.csdn.net/base/java)运行时系统的线程调度程序(*thread scheduler*)来调度的。
