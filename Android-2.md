@@ -4,9 +4,10 @@
 
 * [Handler原理](#Handler原理)
 * [内存泄露以及优化](#内存泄露以及优化)
-* JVM虚拟机/Dalvik/ART(#JVM虚拟机/Dalvik/ART)
+* [ JVM虚拟机/Dalvik/ART](#JVM虚拟机/Dalvik/ART)
+* [Android开机启动流程](#Android开机启动流程)
 * 热修复
-* OKHtttp源码
+* OKHtttp源码分析
 
 
 
@@ -295,6 +296,130 @@ Java本地接口，也叫JNI（Java Native Interface），是为可移植性准�
 * 指示垃圾收集器某个对象不再需要
 
 
+### Dalvik 虚拟机
+#### 与JVM相比，Dalvik虚拟机有如下特点：
+* JVM基于栈，Dalvik基于寄存器。（基于寄存器的虚拟机在执行程序的时候，花费的时间更短）
+* JVM执行的是Java字节码(.class文件)，Dalvik虚拟机执行的是.dex字节码文件。（由dx工具将class文件转换成.dex文件，dex文件格式可以减少整体文件尺寸，加快IO读写速度）
+* Dalvik主要是完成对象生命周期管理，堆栈管理，线程管理， 安全和异常管理，以及垃圾回收等等重要功能。
+* 所有的Android应用程序的线程都对应着一个Linux进程，虚拟机因而可以有更多的依赖操作系统的线程调度和管理机制。
+* Dalvik有一个特殊的虚拟机进程Zygote，他是虚拟机实例的孵化器。它在系统启动的时候就会产生，它会完成虚拟机的初始化，库的加载，预制类库和初始化的操作。每当启动一个APP时，就会将Zygote进程fork()出一个新的实例给APP使用。
+
+#### Dalvik虚拟机架构
+
+![dalvik1](images/dalvik1.png)
+
+#### Android应用的编译以及运行流程
+![dalvik2](images/dalvik2.png)
+一个Android应用程序源码，需要经过如下步骤，才可以运行在Dalvik虚拟机中：
+* 首先将Java代码编译成标准的Java字节码(.class文件)。
+* 使用dx工具将class文件转换为.dex文件
+* 使用aapt(Android Asset Packaging Tool)工具将Dex文件，Resource文件，Manifest文件组合成一个二进制的程序包（APK）。
+* Dalvik将APK中的.dex文件提取出来进行优化，形成.odex文件，将APK文件安装在设备上。
+* 运行该APP时，Dalvik将.odex文件翻译成机器码执行。
+* Dalvik虚拟机直接翻译.odex文件并运行，如果应用包不发生变化，则.odex文件不会重新生成(每次APP重启，Dalvik都会把.odex翻译一遍才执行)。
+
+#### Dalvik进程管理
+
+(1)Zygote是一个虚拟机进程，同时也是一个虚拟机实例的孵化器。每当系统要求执行一个Android应用程序时，Zygote会fork出一个子进程来执行该程序。
+
+(2)在JVM中，当虚拟机启动一个Java应用后，程序逻辑对于操作系统来说，是一个**单进程** 状态。虽然我们可以使用多线程模型，但是对于操作系统来说，这个多线程并不可见，这些线程是JVM模拟出来的，操作系统可见的只是一个单线程的进程。
+Dalvik虚拟机中，每一个线程是对应Linux的线程，每一个进程对应一个Linux进程，进程和线程对操作系统可见。
+
+(3)Dalvik进程模型
+Zygote在使用fork机制时有三种不同的方式，分别是：
+* `fork()` :  Fork一个普通的进程，该进程属于Zygote进程。
+
+* `forkAndSpecialize()` ：Fork一个特殊的进程，该进程不再试Zygote进程。
+
+* `forkSystemServer()`  ：Fork一个系统服务进程。
+
+  ![dalvik3](images/dalvik3.png)
+
+
+#### Dalvik内存管理
+Dalvik的内存管理需要依赖Linux的内存管理机制，垃圾回收是采用了标记-清除法，使用标志位来标识内存中的对象是否正在使用。Dalvik是采用 **分离式的标志位方案**：
+![dalvik4](images/dalvik4.png)
+
+
+### ART -- Android Runtime
+从Android4.4开始，Google使用ART替代了Dalvik虚拟机，Dalvik执行的是.dex字节码，ART虚拟机执行的是机器码。
+
+#### 两种编译模式
+
+* 即时编译技术(JIT：Just In Time)：JVM使用即时编译技术，javac把程序源码编译成Java字节码，JVM通过逐条解释字节码将其翻译成对应的机器指令，逐条读入，逐条翻译执行，这样的话，速度必然比C/C++编译后的可执行二进制字节码程序慢。
+* 预编译技术(AOT : Ahead of Time)：应用程序再第一次安装的时候，字节码就会预先编译成**机器码** ,使之成为真正的本地应用，这样的话，应用每次启动和执行速度都会加快。
+
+在Dalvik中，依靠JIT去编译执行，然后在运行的时候，动态地将执行频率很高的字节码翻译成本地机器码，然后再执行，但是dex字节码翻译成本地机器码的过程是在程序运行的过程中，并且应用程序每次重启，都要做这个翻译工作，效率低下。
+
+应用在安装时，ART虚拟机就把应用程序安装包中的.odex字节码翻译成本地机器码，之后再次打开应用时，执行的都是本地机器码，因此执行效率更快，启动更快。
+
+#### 打包安装运行简化流程
+![dalvik5](images/dalvik5.png)
+
+ART的优点
+* 系统性能显著提升。
+* 应用启动更快，运行更快。
+* 支持更低的硬件。
+* 续航更快。
+
+ART的缺点
+* 更大的存储空间，可能增加10-20%。（空间换时间）
+* 更长的应用安装时间。
+
 
 [回到目录](#index)
-## 热修复
+
+<h2 id="Android开机启动流程">Android开机启动流程</h2>
+
+Android 开机过程可分为两个阶段，第一个阶段是Linux的启动，第二个阶段才是Android的启动。
+![boot2](images/boot2.png)
+
+### 启动过程分析：
+1. Boot Rom：当长按开机键时，引导芯片开始从固化在ROM的预设代码开始执行，然后加载引导程序到RAM。
+2. BootLoader：又称引导程序，它是在操作系统运行的第一个程序，主要工作有检查RAM，初始化硬件参数等。
+3. 初始化Kernel：在这个阶段中，初始化内核和各种设备驱动程序。
+4. init进程：当初始化内核后，就会启动一个重要的进程，也就是**init进程** ，在Linux中所有的进程都是由init进程直接或间接fork出来的。init进程负责创建系统中最关键的几个子进程：SystemServer, Zygote和一些守护者进程(daemons)。
+5. Zygote进程即是所有Android程序的父进程，在Zygote开启时，会调用如下`ZygoteInit.main()` 进行初始化：
+```java
+public static void main(String argv[]) {
+    ....
+    // 加载zygote的时候，会传入参数，startSystemServer变为true
+     boolean startSystemServer = false;
+     for (int i = 1; i < argv.length; i++) {
+                if ("start-system-server".equals(argv[i])) {
+                    startSystemServer = true;
+                } else if (argv[i].startsWith(ABI_LIST_ARG)) {
+                    abiList = argv[i].substring(ABI_LIST_ARG.length());
+                } else if (argv[i].startsWith(SOCKET_NAME_ARG)) {
+                    socketName = argv[i].substring(SOCKET_NAME_ARG.length());
+                } else {
+                    throw new RuntimeException("Unknown command line argument: " + argv[i]);
+                }
+            }
+......
+         // 启动的SystemServer进程
+     if (startSystemServer) {
+                startSystemServer(abiList, socketName);
+         }
+......
+}
+
+```
+
+6. SystemServer 进程：在Zygote的`ZygoteInit.main()` 中，将标志位startSystemServer 设为true,即启动SystemServer 进程，即启动SystemServer进程，SystemServer进程中启动了一些系统里面重要的服务，如ActivityManagerService，WindowManager,DisplayManagerService,PackageManagerService等。当这些服务都启动完毕后，并注册到ServiceManager中。
+
+
+7. Home Activity：即手机的"桌面"界面，当ActivityManagerService开启之后，会调用`finishBooting()`，同时发送广播`ACTION_BOOT_COMPLETED` 。
+
+![boot1](images/boot1.png)
+
+[回到目录](#index)
+
+
+<h2 id="热修复">热修复</h2>  
+代码修复有两大主要的方案，一类是阿里系的底层替换方案，另一类是腾讯系的类加载方案。
+* 底层替换方案：限制颇多，但时效性好，加载轻快，立即见效。
+* 类加载方案：时效性差，需要重新冷启动才能见效，但修复范围广，限制少。
+
+
+[回到目录](#index)

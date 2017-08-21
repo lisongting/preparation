@@ -9,31 +9,20 @@
 <h3 id="index">目录</h3>
 
 * [Android 系统架构](#Android系统架构)
-
 * [Activity 生命周期](#Activity生命周期)
-
 * [Activity的四种加载模式以及使用场景](#Activity的四种加载模式以及使用场景)
-
 * [如何理解Activity,View,Window三者之间的关系？](#如何理解Activity,View,Window三者之间的关系？)
-
+* [Fragment的生命周期](#Fragment的生命周期)
 * [Activity与Fragment通信](#Activity与Fragment通信)
-
 * [Service](#Service)
-
 * [Binder机制](#Binder机制)
-
 * [IPC——跨进程通讯](#IPC——跨进程通讯)
-
 * [View的绘制流程](#View的绘制流程)
-
 * [自定义View和ViewGroup](#自定义View和ViewGroup)
-
 * [TouchEvent事件的传递机制](#TouchEvent事件的传递机制)
-
+* [滑动冲突的解决方法](#滑动冲突的解决方法)
 * [Android中的三种动画](#Android中的三种动画)
-
 * [AIDL的使用](#AIDL的使用)
-
 * [应用程序Activity的启动过程](#应用程序Activity的启动过程)
 
 <h2 id="Android系统架构">Android 系统架构</h2>
@@ -136,6 +125,38 @@ C. 设置Activity的android:configChanges="orientation|keyboardHidden"时，切�
 3：“ViewRoot”通过addView方法来一个个的添加View。比如TextView，Button等
 
 4：这些View的事件监听，是由WindowManagerService来接受消息，并且回调Activity函数。比如onClickListener，onKeyDown等。
+
+[回到目录](#index)
+
+<h2 id="Fragment的生命周期">Fragment的生命周期</h2>
+
+![fragment1](images/fragment1.png)
+
+onAttach()：执行该方法时，Fragment与Activity已经完成绑定，该方法有一个Activity类型的参数，代表绑定的Activity，这时候可以执行诸如mActivity = activity的操作。
+
+onCreate()：初始化Fragment。可通过参数savedInstanceState获取之前保存的值。
+
+onCreateView()：初始化Fragment的布局，返回一个与Fragment对应的View对象。加载布局和findViewById的操作通常在此函数内完成，但是不建议执行耗时的操作，比如读取数据库数据列表。
+
+onActivityCreated()：执行该方法时，与Fragment绑定的Activity的onCreate方法已经执行完成并返回，在该方法内可以进行与Activity交互的UI操作，所以在该方法之前Activity的onCreate方法并未执行完成，如果提前进行交互操作，会引发空指针异常。
+
+onStart()：执行该方法时，Fragment由不可见变为可见状态。
+
+onResume()：执行该方法时，Fragment处于活动状态，用户可与之交互。
+
+onPause()：执行该方法时，Fragment处于暂停状态，但依然可见，用户不能与之交互。
+
+onStop()：执行该方法时，Fragment完全不可见。
+
+onDestroyView()：销毁与Fragment有关的视图，但未与Activity解除绑定，依然可以通过onCreateView方法重新创建视图。通常在ViewPager+Fragment的方式下会调用此方法。
+
+onDestroy()：销毁Fragment。通常按Back键退出或者Fragment被回收时调用此方法。
+
+onDetach()：解除与Activity的绑定。在onDestroy方法之后调用。
+
+与Activity的声明周期进行对比：
+
+![fragment2](images/fragment2.png)
 
 [回到目录](#index)
 
@@ -1038,6 +1059,84 @@ AnimatorSet anim23 = new AnimatorSet();
 
 [回到目录](#index)
 
+<h2 id="滑动冲突的解决方法">滑动冲突的解决方法</h2>
+
+滑动冲突分为三类：
+
+* 外部滑动和内部滑动方向不一致：判断是水平滑动还是竖直滑动，根据滑动的方向将滑动事件交给不同的View。
+* 外部滑动和内部滑动方向一致：根据业务逻辑或某个状态进行判断，决定点击事件的分发
+* 前两种的嵌套：根据业务逻辑或某个状态进行判断，决定点击事件的分发
+
+### 滑动冲突的解决方法：
+
+1.外部拦截法
+
+外部拦截法是指父容器进行拦截处理，我们需要重写父容器的`onInterceptTouchEvent()` 方法 。点击事件首先会到达父容器，触发父容器的`onInterceptTouchEvent()` 方法，如果父容器需要拦截点击事件，则返回true，然后进入到`onTouchEvent()` 中进行处理，需要注意：父容器不能在ACTION_DOWN中返回true，否则这之后的事件序列都会交给它处理，父容器必须在ACTION_DOWN中返回false。在ACTION_MOVE中，父容器进行判断，如果自己需要拦截事件，则返回true，触发自己的`OnTouchEvent()` 方法，否则返回false。在ACTION_UP中，应该返回false。因为ACTION_UP反正也是一个事件序列的末尾了。
+
+外部拦截法的伪代码如下：
+
+```java
+public boolean onInterceptTouchEvent(MotionEvent ev) {
+    boolean intercepted = false;
+    switch (ev.getAction()){
+        case MotionEvent.ACTION_DOWN:
+            intercepted = false;
+            break;
+        case MotionEvent.ACTION_MOVE:
+            if(父控件需要处理){
+                intercepted = true;
+            } else{
+                intercepted = false;
+            }
+            break;
+        case MotionEvent.ACTION_UP:
+            intercepted = false;
+            break;
+    }
+
+    return intercepted;
+}
+```
+
+2.内部拦截法
+
+内部拦截法指的是父容器不拦截任何事件，所有事件全部传递给子元素，如果子元素需要就进行消耗，否则交由父容器进行处理。这种方式需要配合ViewGroup的**FLAG_DISALLOW_INTERCEPT** 标志位来使用。设置此标志为可以通过`requestDisallowInterceptTouchEvent()` 函数来设置，如果设置了此标志位，那么ViewGroup就无法拦截除了ACTION_DOWN之外的任何事件。这样首先我们保证ViewGroup的onInterceptTouchEvent方法除了DOWN其他都返回true，DOWN返回false，这样保证了不会拦截DOWN事件，交给它的子View进行处理；重写子View的`dispatchTouchEvent()`函数，在DOWN中设置`parent.requestDisallowInterceptTouchEvent(true)` ，这样父控件在默认的情况下DOWN之后的所有事件它都拦截不到，交由子View来处理，View在MOVE中判断父控件需要时，调用`parent.requestDisallow InterceptTouchEvent(false)` ，这样父控件的拦截又起作用了，相应的事件交给了父控件进行处理。伪代码如下：
+
+父控件中：
+
+```java
+@Override
+public boolean onInterceptTouchEvent(MotionEvent ev) {
+    int action = ev.getAction();
+    if(action == MotionEvent.ACTION_DOWN){
+        return false;
+    } else {
+        return true;
+    }
+}
+```
+
+子View中：
+
+```java
+@Override
+public boolean dispatchTouchEvent(MotionEvent ev) {  
+    switch (ev.getAction()){
+        case MotionEvent.ACTION_DOWN:           getParent().requestDisallowInterceptTouchEvent(true);
+            break;
+        case MotionEvent.ACTION_MOVE:
+            if(父控件需要此点击事件){                getParent().requestDisallowInterceptTouchEvent(false);
+            }
+            break;
+        case MotionEvent.ACTION_UP:
+            break;
+    }
+}
+```
+
+
+
+ [回到目录](#index)
 
 <h2 id="AIDL的使用">AIDL的使用</h2>
 
