@@ -904,23 +904,14 @@ public class BinaryTree<T> {
 		return root;
 	}
 	//[重要]获取树的深度
-	public int deep(){
-		return deep(root);
-	}
-	//[重要]一个递归方法
-	public int deep(Node node){
-		if(node == null){
+	public int deep(Node root){
+		if(root == null){
 			return 0;
-		}
-		if(node.left == null || node.right == null){
-			return 1;
 		}else{
-			int leftDeep =deep(node.left); 
-			int rightDeep = deep(node.right);
-			int max = leftDeep > rightDeep ? leftDeep : rightDeep;
-			return max + 1;//这里为什么
+			return 1+Math.max(deep(root.left),deep(root.right));
 		}
 	}
+
 	//[重要]先序遍历:先遍历根节点
 	//中序遍历和后序遍历都是同理
 	public void preVisit(){
@@ -981,21 +972,36 @@ public class BinaryTree<T> {
 	 *             F
 	 */
 	public static void main(String[] args) {
-		BinaryTree<String> tree = new BinaryTree<>("根节点A");
-		BinaryTree.Node tn1 = tree.addNode(tree.root(), "第二层左节点B", true);
-		BinaryTree.Node tn2 = tree.addNode(tree.root(), "第二层右节点C", false);
-		BinaryTree.Node tn3 = tree.addNode(tn2, "第三层左节点D", true);
-		BinaryTree.Node tn4 = tree.addNode(tn2, "第三层右节点E", false);
-		BinaryTree.Node tn5 = tree.addNode(tn3, "第四层左节点F", true);
-		System.out.println("tn2的左子节点："+tn2.left.data);
-		System.out.println("tn2的右子节点："+tn2.right.data);
-		System.out.println("tn3的左子节点: "+tn3.left.data);
-		System.out.println("深度:"+tree.deep());
-		tree.preVisit();System.out.println();
+		BinaryTree<String> tree = new BinaryTree<>("A");
+		BinaryTree.Node tn1 = tree.addNode(tree.root(), "B", true);
+		BinaryTree.Node tn2 = tree.addNode(tree.root(), "C", false);
+		BinaryTree.Node tn3 = tree.addNode(tn2, "D", true);
+		BinaryTree.Node tn4 = tree.addNode(tn2, "E", false);
+		BinaryTree.Node tn5 = tree.addNode(tn3, "F", true);
+		System.out.println("C的左子节点："+tn2.left.data);
+		System.out.println("C的右子节点："+tn2.right.data);
+		System.out.println("D的左子节点: "+tn3.left.data);
+		System.out.println("深度:"+tree.deep(tree.root()));
+		
+		System.out.print("先序遍历:");
+		tree.preVisit();
+		System.out.println();
+		
+		System.out.print("广度优先遍历:");
 		tree.breadthFirst();
+		System.out.println();
 	}
 
 }
+/**
+ * 输出结果：
+    C的左子节点：D
+	C的右子节点：E
+	D的左子节点: F
+	深度:4
+	先序遍历:A B C D F E 
+	广度优先遍历:A B C D E F 
+*/
 
 ```
 [回到目录](#index)
@@ -1282,7 +1288,7 @@ public class BinarySearchTree {
 		BSTree.middleVisit();System.out.println();
 		System.out.println("广度优先遍历为：");
 		BSTree.breadthFirst();System.out.println();
-		System.out.println("移除了13节点后：");
+		System.out.println("移除了13节点后的中序遍历：");
 		BSTree.remove(13);
 		BSTree.middleVisit();System.out.println();
 		System.out.println("广度优先遍历为：");
@@ -1294,12 +1300,11 @@ public class BinarySearchTree {
 2 3 5 6 8 10 13 20 25 36 
 广度优先遍历为：
 6 2 13 5 8 25 3 10 20 36 
-移除了13节点后：
+移除了13节点后的中序遍历：
 2 3 5 6 8 10 20 25 36 
 广度优先遍历为：
 6 2 10 5 8 25 3 20 36  
 */
-
 ```
 [回到目录](#index)
 

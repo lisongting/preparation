@@ -6,9 +6,8 @@
 * [内存泄露以及优化](#内存泄露以及优化)
 * [ JVM虚拟机/Dalvik/ART](#JVM虚拟机/Dalvik/ART)
 * [Android开机启动流程](#Android开机启动流程)
-* 热修复
+* [热修复](#热修复)
 * OKHtttp源码分析
-
 
 
 
@@ -418,8 +417,60 @@ public static void main(String argv[]) {
 
 <h2 id="热修复">热修复</h2>  
 代码修复有两大主要的方案，一类是阿里系的底层替换方案，另一类是腾讯系的类加载方案。
+
+### 底层替换方案
+底层替换方案是在已经加载了的类中直接替换掉原有方法，是在原来类的基础上进行修改的，因而无法实现对与原有类进行方法和字段的删减，因为这样会破坏原有类的结构。（只能进行方法的替换）
+底层替换的不稳定性：一旦补丁类中出现了方法的增加或减少，就会导致这个类以及整个Dex的方法数发生变化，方法数的变化伴随着方法索引的变化，这样在访问方法时就无法正确地索引到目标方法了。如果字段发生了增加或减少，则所有字段的索引都会发生变化，那么对于原先已经产生的这个类的实例，他们还是原来的结构，这样在访问新增字段的时候就会出现错误。
+
+### 类加载方案
+类加载方案的原理是在APP重启后让ClassLoader去加载新的类，因为在APP运行到一半时，所有需要变更的类已经被加载过了，如果不重启，则原来的类还是虚拟机中，此时只有重启，重启后在还没有走到业务逻辑之前抢先加载补丁中的新类，这样后续访问这个类时，就会解析为新类，从而达到热修复的目的。
+
 * 底层替换方案：限制颇多，但时效性好，加载轻快，立即见效。
 * 类加载方案：时效性差，需要重新冷启动才能见效，但修复范围广，限制少。
+
+### Sophix热修复方案
+Sophix热修复方案综合使用了底层替换方案（热部署）和类加载方案（冷启动）：
+
+#### 热部署——底层替换
+**虚拟机调用方法的原理** ：
+以ART虚拟机为例，每一个Java方法在ART中都对应着一个`ArtMethod` ，ArtMethod 记录了这个Java方法的所有信息，包括所属类，访问权限，代码执行地址等。
+Android6.0中，ART虚拟机中的ArtMethod是这样的：
+```
+class ArtMethod FINAL{
+    protected :
+
+    GcRoot<mirror::Class > declaring_class_;
+    GcRoot<mirror::PointerArray> dex_cache_resolved_methods_;
+    GcRoot<mirror::ObjectArray<mirror::Class> dex_cache_resolved_types_;
+    uint32_t access_flags;
+    uint32_t dex_method_index;
+    uint32_t method_index;
+
+    struct PACKED(4) ptrSizedFields{
+        void* entry_point_from_interpreter_;
+        void* entry_point_from_jni_;
+        void* entry_point_from_quick_compiled_code_;
+    }ptr_sized_fields_;
+}
+
+```
+
+其中重要的是`entry_point_from_interpreter_` 和`entry_point_from_quick_compiled_code_`  ，它们都指向方法的执行入口，如果是以JIT(即时解释执行)模式的虚拟机，则`entry_point_from_interpreter_` 就是方法的执行地址。如果是以AOT模式的虚拟机，dex文件会被预先编译成机器码，则`entry_point_from_quick_compiled_code_` 就是方法的执行地址。
+
+
+AndFix底层替换方案是按照开源Android代码中的ArtMethod进行逐个方法替换的，当手机厂商对开源Android中的ArtMethod进行了更改时，逐个方法替换就会造成索引偏移不正确，从而引发在机型适配上的热修复失败的问题。
+Sophix采用了对ArtMethod整体替换。使用新的ArtMethod对旧的进行整体替换，从而可以无视底层ArtMethod的结构。
+
+
+### 冷启动——类加载
+Dalvik和ART尝试将一个dex文件解析加载到内存时，调用了`DexFile.loadDex()` 方法。
+1. Dalvik尝试把dex文件加载到内存时，如果此时压缩包中有多个dex文件，则只会加载**classes.dex** ， 之外的其他dex被直接忽略掉。（Dalvik只能加载一个classes.dex，不支持多dex）
+2. ART可以支持加载多个dex文件，当ART会首先加载classes.dex ，如果有其他的dex文件，则再依次加载后续的classes.dex 。所以ART下的冷启动修复方案是：把补丁包命名为classes.dex，将原apk中的dex依次命名为classes2.dex,classes3.dex等等，然后一起打包为一个压缩文件。在DexFile.loadDex得到DexFile对象，最后把该DexFile对象整个替换掉旧的dexElements数组。补丁类是存在于classes.dex中，当而旧的类(bug类)是存在于其他的classes.dex中，当先加载了classes.dex后，由于内存中已经有这个类了，后面便不再加载旧的bug类，从而达到修复的目的。
+3. 无论是Dalvik还是ART，当虚拟机将dex文件加载到内存之前，如果dex不存在对应的odex，那么Dalvik会执行`dexopt` ，ART会执行`dexoat` ，最后得到的是一个优化后的dex——odex，实际上虚拟机执行的是odex。
+
+Sophix的最终处理是：
+* Dalvik下采用了自行研发的全量dex方案。
+* ART下把补丁dex作为主dex文件(classes.dex)，进行先加载。
 
 
 [回到目录](#index)
