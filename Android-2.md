@@ -429,9 +429,9 @@ public static void main(String argv[]) {
 * 类加载方案：时效性差，需要重新冷启动才能见效，但修复范围广，限制少。
 
 ### Sophix热修复方案
-Sophix热修复方案综合使用了底层替换方案（热部署）和类加载方案（冷启动）：
+Sophix热修复方案综合使用了底层替换方案（热部署）、类加载方案（冷启动）、资源热修复、so库热修复：
 
-#### 热部署——底层替换
+#### 1.热部署——底层替换
 **虚拟机调用方法的原理** ：
 以ART虚拟机为例，每一个Java方法在ART中都对应着一个`ArtMethod` ，ArtMethod 记录了这个Java方法的所有信息，包括所属类，访问权限，代码执行地址等。
 Android6.0中，ART虚拟机中的ArtMethod是这样的：
@@ -457,12 +457,11 @@ class ArtMethod FINAL{
 
 其中重要的是`entry_point_from_interpreter_` 和`entry_point_from_quick_compiled_code_`  ，它们都指向方法的执行入口，如果是以JIT(即时解释执行)模式的虚拟机，则`entry_point_from_interpreter_` 就是方法的执行地址。如果是以AOT模式的虚拟机，dex文件会被预先编译成机器码，则`entry_point_from_quick_compiled_code_` 就是方法的执行地址。
 
-
 AndFix底层替换方案是按照开源Android代码中的ArtMethod进行逐个方法替换的，当手机厂商对开源Android中的ArtMethod进行了更改时，逐个方法替换就会造成索引偏移不正确，从而引发在机型适配上的热修复失败的问题。
 Sophix采用了对ArtMethod整体替换。使用新的ArtMethod对旧的进行整体替换，从而可以无视底层ArtMethod的结构。
 
 
-### 冷启动——类加载
+### 2.冷启动——类加载
 Dalvik和ART尝试将一个dex文件解析加载到内存时，调用了`DexFile.loadDex()` 方法。
 1. Dalvik尝试把dex文件加载到内存时，如果此时压缩包中有多个dex文件，则只会加载**classes.dex** ， 之外的其他dex被直接忽略掉。（Dalvik只能加载一个classes.dex，不支持多dex）
 2. ART可以支持加载多个dex文件，当ART会首先加载classes.dex ，如果有其他的dex文件，则再依次加载后续的classes.dex 。所以ART下的冷启动修复方案是：把补丁包命名为classes.dex，将原apk中的dex依次命名为classes2.dex,classes3.dex等等，然后一起打包为一个压缩文件。在DexFile.loadDex得到DexFile对象，最后把该DexFile对象整个替换掉旧的dexElements数组。补丁类是存在于classes.dex中，当而旧的类(bug类)是存在于其他的classes.dex中，当先加载了classes.dex后，由于内存中已经有这个类了，后面便不再加载旧的bug类，从而达到修复的目的。
@@ -472,5 +471,85 @@ Sophix的最终处理是：
 * Dalvik下采用了自行研发的全量dex方案。
 * ART下把补丁dex作为主dex文件(classes.dex)，进行先加载。
 
+### 3.资源热修复
+Instant Run 中的资源热修复：
+* 首先构造一个新的AssetManager，并通过反射调用addAssetPath，把这个完整的新资源包加入到AssetManager中，这样就得到了一个含有所有资源的AssetManager。
+* 通过反射得到Activity中的AssetManager的引用处，全部换成新的AssetManager。
+
+APK中的资源实际上是存储在底层AssetManager的mResources成员中，mResources成员是一个ResTable类：
+```
+class ResTable{
+    mutable Mutex     mLock;//互斥锁，用于多进程间访问互斥
+    status_t                mError;
+    resTable_config     mParams;
+    Vector<Header*>     mHeaders;//表示所有resources.arsc原始数据，这就等同于所有通过addAssetPath加
+                                                        //载进来的路径资源id信息
+    Vector<PackageGroup*> mPackageGroups;//资源包的实体，包含所有加载进来的package id所对应的资源
+    uint8_t                 mPackageMaps;//索引表
+    uint9_t                 mNextPackageId;
+};
+```
+一个Android进程只包含一个ResTable，ResTable的成员变量mPackageGroups就是所有解析过的资源包的集合，任何一个一个资源包都含有resources.arsc，它记录了所有资源id分配情况和资源中的所有字符串，这些信息是以二进制的方式存储的。底层AssetManager 做的就是解析这个文件，然后把相关信息存储到mPackageGroups里面。
+
+一个resources.arsc里面包含若干个package，默认情况下，由打包工具aapt打出来的包只有一个package，这个package里包含了app中的所有资源信息。资源信息主要是指每个资源的名称和它对应的编号。编号是一个32位的int型，用16进制表示就是0xPPTTEEEE，PP为package id,TT为type id，EEEE为entry id。`type id` 是指资源的类型，如attr的type id为1，drawable的type id 为2,mipmap的type id 为3，layout的type id 为4等。entry id代表在一类资源中，资源文件的id索引。如layout类型，第一个layout的entry id 为0x0000，第二个layout为0x0001，依次类推（这个entry id是根据排布顺序决定的）。
+
+
+由aapt工具打包后，APP中资源包的package id 为**0x7f**，系统的资源包的package id为**0x01** 。
+
+**Sophix的资源修复原理** ：
+构造了一个package id 为`0x66` 的资源包，这个包里只包含已改变的资源项，然后在原有AssetManager中`addAssetPath` 这个包。新增的资源包不与已加载的`0x7f` 冲突，因此直接加入到已有的AssetManager中就可以直接使用了。
+
+### 4.so库修复
+Java Api提供了两种方法加载一个so库：
+* System.loadLibrary(String libName):传进去的参数是so库名称，默认是表示so库位于apk压缩文件的libs目录，最后复制到apk安装目录下。
+* System.load(String pathName):传进去的参数是so库在磁盘中的完整路径，表示加载一个外部的so库文件。
+
+上面两种方法实际上都调用了`nativeLoad()`这个native方法去加载so库。
+
+JNI编程中，动态注册的native方法必须要实现`JNI_OnLoad` 方法，同时实现一个JNINativeMethod[]数组，静态注册的native方法必须使**Java_类完整路径_方法名的格式** 。
+
+![sophix1](images/sophix1.png)
+
+由于so库热部署实现起来约束多，于是Sophix团队放弃了So库的热部署。Sophix对于so库的修复是采取了冷启动修复的方式：
+
+Sophix采用的反射注入方案：
+在`System.loadLibrary("native-lib")` 函数中，最终这个so库最终传给native方法的执行参数是**so库在磁盘中的完整路径** 。so库的路径搜索是调用`DexPathList` 的`findLibrary()` 函数：
+```java
+//这是sdk<23的实现方式
+private final File[] nativeLibraryDirectories;
+public String findLibrary(String libraryName){
+    String fileName = System.mapLibraryName(libraryName);
+    for(File directory : nativeLibraryDirectories){
+        String path = new File(directory,fileName).getPath();
+        if(IoUtils.canOpenReadOnly(path)){
+                //如果path文件存在并且可以打开，则返回该路径
+                return path;
+        }
+    }
+    return null;
+}
+```
+实际上寻找so库是遍历`nativeLibraryDirectories` 数组，而只要将补丁so库路径插入到`nativeLibraryDirectories` 数组最前面，这样就能达到加载so库的时候是补丁so库而不是原来so库的目录，从而达到修复的目的。
+
+```java
+//这是sdk>=23的实现方式
+private final Element[] nativeLibraryElements;
+public String findLibrary(String libraryName){
+    String fileName = System.mapLibraryName(libraryName);
+    for(Element element : nativeLibraryElements){
+        String path = new File(directory,fileName).getPath();
+        if(IoUtils.canOpenReadOnly(path)){
+                //如果path文件存在并且可以打开，则返回该路径
+                if(path != null){
+                    return path;
+                }
+        }
+    }
+    return null;
+}
+```
+当sdk>=23时，只要把补丁so库的完整路径作为参数构造一个`Element` 对象，然后再插入到nativeLibraryElements数组最前面就可以达到修复的目的。
+
+ ![Sophix2](images/sophix2.png)
 
 [回到目录](#index)
