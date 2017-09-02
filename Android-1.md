@@ -15,6 +15,7 @@
 * [Fragment的生命周期](#Fragment的生命周期)
 * [Activity与Fragment通信](#Activity与Fragment通信)
 * [Service](#Service)
+* [SQLite](#SQLite)
 * [Binder机制](#Binder机制)
 * [IPC——跨进程通讯](#IPC——跨进程通讯)
 * [View的绘制流程](#View的绘制流程)
@@ -291,6 +292,97 @@ Service生命周期图三：
 **同一服务A，用任何组件多次bind服务A时**
 
 第一次绑定时会调用onCreate->onBind()。随后无论哪个组件再绑定几次该Service。服务A的onCreate()和onBind()只调用一次。
+
+[回到目录](#index)
+
+
+
+<h2 id="SQLite">SQLite</h2> 
+
+1.SQLiteOpenHelper
+
+使用SQLite通常要借助SQLiteOpenHelper，SQLiteOpenHelper是Android提供的一个管理数据库的工具类，可用于管理数据库的创建和版本更新。一般的用法是创建SQLiteOpenHelper的子类，并重写它的onCreate(SQLiteDatabase db)和onUpgrade(SQLiteDatabase db,int oldVersion,int newVersion)方法。
+
+SQLiteOpenHelper包含以下常用方法：
+
+![sqlite1](images/sqlite1.png)
+
+一般使用SQLite的方法是，创建一个继承SQLiteOpenHelper的类，重写`onCreate`和`onUpdate` 方法，如下示例所示：
+
+```java
+public class MyDbHelper extends SLiteOpenHelper{
+  private final String CREATE_TABLE = "create table student(_id Integer primary key auto increment,name ,age)";
+  public MyDbHelper(Context context,String name,int version{
+      super(context,name,version);
+  }
+  public void onCreate(SQLiteDatabase db){
+      db.execSQL(CREATE_TABLE);
+  }  
+  public void onUpdate(SQLiteDatabase db,int oldVersion,int newVersion){
+      //升级时可进行修改表结构等操作
+  }
+}
+```
+
+`onCreate(SQLiteDatabase db)` :用于初次使用应用程序时生成数据库表。当调用getReadableDatabase()和getWritableDatabase()来获取数据库实例时，如果数据库不存在，Android系统会自动生成一个数据库，接着调用onCreate()方法，onCreate()方法只会在初次生成数据库时才被调用。
+
+`onUpdate(SQLiteDatabase db,int oldVersion,int newVersion)` :用于升级软件时更新数据库表结构，此方法在数据库版本发生变化是会被调用，oldVersion代表之前的数据库版本，newVersion代表数据库当前的版本号。SQLiteOpenHelper的构造函数中，有一个指定版本号的参数，只要在创建SQLiteOpenHelper对象时，输入的版本号高于上一个版本号，系统就会自动触发onUpgrade()方法，从而进行表结构更新。
+
+2.SQLiteDatabase
+
+SQLiteDatabase代表一个数据库对象，SQLiteDatabase提供了如下静态方法来打开一个数据库文件：
+
+![sqlite2](images/sqlite2.png)
+
+在程序中获取了SQLiteDatabase数据库对象之后，就可以调用SQLiteDatabase的如下方法来操作数据库：
+
+* `execSQL(String sql,Object[] bindArgs)` :执行带占位符的SQL语句。
+* `execSQL(String sql )` ：执行指定SQL语句。
+* `insert(String table,String nullCulumnHack,ContentValues values)` :向指定表中插入数据。ContentValues是以键值对形式存放数据的。键通常应该是列名。
+* `update(String table,ContentValues values,String whereClause,String[] whereArgs)`  ：更新指定表中的特定数据。
+* `delete(String table,String whereClause,String[] whereArgs)` ：删除表中满足条件的行。
+
+3.Cursor
+
+Cursor 是查询到的数据条目的集合，相当于JDBC中的ResultSet。Cursor使用如下方法来移动查询结果的记录指针：
+
+ ![sqlite3](images/sqlite3.png)
+
+可调用SQLiteDatabase中的如下方法来获取Cursor：
+
+```java
+//执行带占位符的SQL查询语句
+Cursor rawQuery(String sql,String[] selection);
+
+//执行指定的查询操作。
+Cursor query(String table,String[] columns,String whereClause,String[] whereArgs,String groupBy,String having,String orderBy);
+
+//对指定表进行查询，limit参数控制最多查询几条记录。
+Cursor query(String table, String[] columns, String selection,String[] selectionArgs, String groupBy, String having,String orderBy, String limit);
+
+//对指定表进行查询，第一个参数用于控制是否去除重复值。  
+Cursor query(boolean distinct, String table, String[] columns,String selection, String[] selectionArgs, String groupBy,String having, String orderBy, String limit)：
+
+```
+
+4.Transaction
+
+通常以这种形式来使用SQLite的Transaction：
+
+```java
+SQLiteDatabase db = dbHelper.getWritableDatabase();
+db.beginTransaction();
+db.execSQL("........");
+db.execSQL("........");
+db.execSQL("........");
+db.setTransactionSuccessful();
+db.endTransaction();
+db.close();
+```
+
+
+
+
 
 [回到目录](#index)
 
