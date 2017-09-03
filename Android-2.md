@@ -2,12 +2,11 @@
 
 <h3 id="index">目录</h3>
 
-* [Handler原理](#Handler原理)
 * [内存泄露以及优化](#内存泄露以及优化)
+* [Handler原理](#Handler原理)
 * [ JVM虚拟机/Dalvik/ART](#JVM虚拟机/Dalvik/ART)
 * [Android开机启动流程](#Android开机启动流程)
 * [热修复](#热修复)
-* OKHtttp源码分析
 
 
 
