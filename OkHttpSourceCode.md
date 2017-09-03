@@ -88,7 +88,7 @@ public Builder() {
 @Override public Call newCall(Request request) {
     return new RealCall(this, request, false /* for web socket */);
   }
- ```
+```
 
  ## RealCall : 请求执行者
 构造方法：
@@ -99,7 +99,7 @@ RealCall(OkHttpClient client, Request originalRequest, boolean forWebSocket) {
     this.forWebSocket = forWebSocket;
     this.retryAndFollowUpInterceptor = new RetryAndFollowUpInterceptor(client, forWebSocket);
   }
- ```
+```
  Call的`execute()` (同步)方法：
  ```java
  @Override public Response execute() throws IOException {
@@ -118,7 +118,7 @@ RealCall(OkHttpClient client, Request originalRequest, boolean forWebSocket) {
       client.dispatcher().finished(this);
     }
   }
-  ```
+ ```
   `execute()` 方法的执行过程为：
   * 检查这个call是否已经被执行过了，每个call只能被执行一次，如果想再次执行call，则可以利用`clone` 方法来克隆。
   * 利用`client.dispatcher().execute(this)` 来进行实际的执行，`dispatcher` 就是OkHttpClient的成员之一。
@@ -145,7 +145,7 @@ Response getResponseWithInterceptorChain() throws IOException {
         interceptors, null, null, null, 0, originalRequest);
     return chain.proceed(originalRequest);//(8)
   }
- ```
+```
  (1) 将配置OkHttpClient时的拦截器加入到责任链中。
 
  (2) 负责失败重试以及重定向的拦截器`RetryAndFollowUpInterceptor` 。
@@ -205,11 +205,11 @@ Response getResponseWithInterceptorChain() throws IOException {
    }
    return response;
  }
- ```
+```
 *  `RealInterceptorChain next = new RealInterceptorChain(
      interceptors, streamAllocation, httpCodec, connection, index + 1, request);` 实例化下一个拦截器对应的`RealInterceptorChain`对象，这个对象会在再次传递给当前的拦截器。
-* `Interceptor interceptor = interceptors.get(index);` ：从ArrayList中获取当前的拦截器。
-* `Response response = interceptor.intercept(next);` :调用当前拦截器的`intercept()` 方法，并将下一个拦截器的`RealInterceptorChain` 对象传递下去。
+*  `Interceptor interceptor = interceptors.get(index);` ：从ArrayList中获取当前的拦截器。
+*  `Response response = interceptor.intercept(next);` :调用当前拦截器的`intercept()` 方法，并将下一个拦截器的`RealInterceptorChain` 对象传递下去。
 
 ## 分析各个拦截器的`intercept()` 方法
 
@@ -304,10 +304,10 @@ Response getResponseWithInterceptorChain() throws IOException {
       priorResponse = response;
     }
   }
- ```
+```
 
  ### BridgeInterceptor
- 负责把用户构造的请求转换为发送到服务器的请求、把服务器返回的响应转换为用户友好的响应的 。
+ 负责把用户构造的请求转换为发送到服务器的请求（实际上就是添加了一些默认的请求头），把服务器返回的响应转换为"用户友好"的响应(添加了一些默认的响应头) 。
  ```java
  @Override public Response intercept(Chain chain) throws IOException {
     Request userRequest = chain.request();
@@ -377,7 +377,7 @@ Response getResponseWithInterceptorChain() throws IOException {
     //利用从chain.proceed()中得到的Response，构建一个新的response对象返回
     return responseBuilder.build();
   }
-  ```
+ ```
 
   ### CacheInterceptor
   用来进行缓存的拦截器
@@ -389,7 +389,7 @@ Response getResponseWithInterceptorChain() throws IOException {
         : null;
 
     long now = System.currentTimeMillis();
-
+	//根据request来得到缓存策略
     CacheStrategy strategy = new CacheStrategy.Factory(now, chain.request(), cacheCandidate).get();
     Request networkRequest = strategy.networkRequest;
     Response cacheResponse = strategy.cacheResponse;
@@ -446,7 +446,7 @@ Response getResponseWithInterceptorChain() throws IOException {
             .build();
         networkResponse.body().close();
 
-        //在剥离content-coding之前，更新缓存
+        //更新缓存
         cache.trackConditionalCacheHit();
         cache.update(cacheResponse, response);
         return response;
@@ -469,10 +469,10 @@ Response getResponseWithInterceptorChain() throws IOException {
   }
   ```
 整个关于缓存的拦截器做的工作：
-* 首先，根据request来判断cache中是否有缓存的response，如果有，得到这个response，然后进行判断当前response是否有效，没有将cacheCandate赋值为空。
-* 根据request判断缓存的策略，是否要使用了网络，缓存 或两者都使用
-调用下一个拦截器，决定从网络上来得到response
-* 如果本地已经存在cacheResponse，那么让它和网络得到的networkResponse做比较，决定是否来更新缓存的cacheResponse
+* 首先，根据request来判断cache中是否有缓存好的response，如果有，通过调用`cache.get(chain.request())` 得到这个response。
+* 根据request判断缓存的策略，是否要使用了网络？还是直接获取缓存 ？或两者都使用？
+  `networkResponse = chain.proceed(networkRequest);`调用下一个拦截器，决定从网络上来得到response
+* 如果本地已经存在cacheResponse，那么让它和网络得到的networkResponse做比较，决定是否来更新缓存下来的cacheResponse
 * 缓存未经缓存过的response
 
 ### ConnectInterceptor
@@ -490,7 +490,7 @@ ConnectInterceptor是用来建立连接的。
 
     return realChain.proceed(request, streamAllocation, httpCodec, connection);
   }
- ```
+```
  实际就是创建了`HttpCodec` 对象，它是对HTTP协议的抽象，它有两个实现，`Http1Codec` 和`Http2Code` ，分别对应HTTP/1.1和HTTP/2版本的实现。
 
 在Http1Codec 中，它利用Okio对Socket的读写操作进行封装，Okio对java.io和java.nio进行了更便捷高效的封装，方便使用者进行高效的io操作。
@@ -563,7 +563,7 @@ ConnectInterceptor是用来建立连接的。
 
     return response;
   }
- ```
+```
 OkHttp的拦截器用了责任链设计模式,它将请求一层一层向下传，直到有一层能够得到Response就停止向下传递，然后将response向上面的拦截器传递，然后各个拦截器会对respone进行一些处理，最后会传到RealCall类中来得到response。由于`execute` 是同步方法，因此不需要设置回调。
 
 
@@ -607,7 +607,7 @@ private final OkHttpClient client = new OkHttpClient();
    captureCallStackTrace();
    client.dispatcher().enqueue(new AsyncCall(responseCallback));
  }
- ```
+```
 如果`execute` 为true，表示已经执行过了，则会抛异常。
 如果没有执行过，则调用`captureCallStackTrace()` :
 ```java
@@ -617,7 +617,7 @@ private void captureCallStackTrace() {
     //给这个retryAndFollowUpInterceptor拦截器设置方法栈
     retryAndFollowUpInterceptor.setCallStackTrace(callStackTrace);
   }
- ```
+```
  dispatcher的`enqueue()`方法 ：
  ```java
  synchronized void enqueue(AsyncCall call) {
@@ -675,7 +675,7 @@ private void captureCallStackTrace() {
       }
     }
   }
-```    
+ ```
 而`Callback`就是我们在执行`enqueue()`时传进入的回调。`Callback` 接口如下：
 ```java
 public interface Callback {
@@ -705,4 +705,4 @@ public interface Callback {
 
 至此，整个OkHttp的Get同步和异步请求的过程就分析完了。。。
 
---------------2017.7.3  20:39--------------------
+--------------2017.9.3  20:39--------------------
