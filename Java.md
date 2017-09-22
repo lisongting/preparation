@@ -269,6 +269,92 @@ final关键字可以用来修饰：
 2. final变量可以安全的在多线程环境下进行共享，而不需要额外的同步开销。
 3. 使用final关键字，JVM会对方法、变量及类进行优化。
 
+## 线程同步
+### 使用synchronized修饰方法进行同步
+如：
+```java
+int tickets = 10;
+public synchronized void buyTicket(){
+    tickets --;
+}
+```
+
+synchronized关键字也可以修饰静态方法，当调用静态方法时，将会**锁住整个类** 。
+
+### 使用synchronized 同步代码块
+如：
+```java
+int tickets  = 10;
+public void buyTicket(){
+    synchronized(this){
+        tickets--;
+    }
+}
+```
+
+### 使用volatile关键字实现同步
+通常在多线程执行的时候，每个线程会先从内存中拷贝变量到CPU缓存中，因为每个线程可能在不同的CPU上进行处理，这就意味着同一个变量会被拷贝多次。这就造成了多线程并发访问无法同步的问题。而使用了volatile关键字的变量，JVM保证该变量每次读取都是从内存中读取，跳过CPU cache这一步，于是就达到了多个线程访问同一个变量的目的。
+
+当一个变量被定义为volatile之后，将具备两种特性：
+* 保证此变量对所有线程的即时可见性，当变量改变时，新值能立即同步到主存中，以及每次使用前立即从主存刷新。
+* 禁止指令重排序优化。指令重排序指的是：CPU允许将多条指令不按规定的顺序分开发送给各电路单元处理。有了volatile修饰的变量，在其赋值语句后面会多一个`load addl $0x0, (%esp)` 操作，相当于加了一个**内存屏障** ，禁止了指令重排序，这样就不能把后面的指令重排序到内存屏障之前的位置。
+示例：
+```java
+class Bank{
+    private volatile int money = 100;
+
+    public int getMoney(){
+        return money;
+    }
+    public void saveMoney(int  m){
+        money += m;
+    }
+}
+```
+volatile不提供任何原子操作，也不能用来修饰final类型的变量。
+
+### 使用ReentrantLock
+ReentrantLock是位于java.utl.concurrent包中，ReentrantLock是可重入，互斥，实现了Lock接口的锁。
+ReentrantLock类的常用方法有：
+* `ReentrantLock() ` ：创建一个ReentrantLock实例。
+* `lock()`：获得锁
+* `unlock()`：释放锁
+
+使用示例：
+```java
+class Bank {
+    private int account = 100;
+    private Lock lock = new ReentrantLock();
+    public int getAccount(){
+        return account;
+    }
+    public void save(int money){
+        lock.lock();
+        try{
+            account += money;
+        }finally{
+            lock.unlock();
+        }
+    }
+}
+```
+
+### wait() 和 notify()
+wait()用来让当前线程等待，会释放锁。
+notify用来唤醒对应线程，让其继续执行。
+在调用wait(), notify()或notifyAll()的时候，必须先获得锁，且状态变量须由该锁保护，而固有锁对象与固有条件队列对象又是同一个对象。也就是说，要在某个对象上执行wait，notify，先必须锁定该对象，而对应的状态变量也是由该对象锁保护的。
+典型的wait()使用示例：
+```java
+public void test() throws InterruptedException {
+    synchronized(obj) {
+      while (! contidition) {
+        obj.wait();
+      }
+    }
+  }
+```
+
+
 
 
 ## 深克隆和浅克隆
