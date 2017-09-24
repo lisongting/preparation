@@ -298,7 +298,7 @@ public void buyTicket(){
 当一个变量被定义为volatile之后，将具备两种特性：
 * 保证此变量对所有线程的即时可见性，当变量改变时，新值能立即同步到主存中，以及每次使用前立即从主存刷新。
 * 禁止指令重排序优化。指令重排序指的是：CPU允许将多条指令不按规定的顺序分开发送给各电路单元处理。有了volatile修饰的变量，在其赋值语句后面会多一个`load addl $0x0, (%esp)` 操作，相当于加了一个**内存屏障** ，禁止了指令重排序，这样就不能把后面的指令重排序到内存屏障之前的位置。
-示例：
+  示例：
 ```java
 class Bank{
     private volatile int money = 100;
@@ -569,3 +569,35 @@ System.out.println(dataFormat.format(date1));
 2.最主要是sleep方法**不释放锁** ，而wait方法**释放了锁** ，使得其他线程可以使用同步控制块或者方法。sleep不出让系统资源；wait是进入线程等待池等待，出让系统资源，其他线程可以占用CPU。一般wait不会加时间限制， 因为如果wait线程的运行资源不够，再出来也没用，要等待其他线程调用**notify/notifyAll** 唤醒等待池中的所有线程，才会进入就绪队列等待OS分配系统资源。sleep(milliseconds)可以用时间指定使它自动唤醒过来，如果时间不到只能调用interrupt()强行打断。
 3.wait，notify和notifyAll只能在同步控制方法或者同步控制块里面使用，而sleep可以在任何地方使用。
 4.Sleep需要捕获异常,而wait不需要。
+
+
+
+## HashMap和Hashtable
+
+HashMap和Hashtable都实现了Map接口、Serializable接口和Cloneable接口。HashMap和Hashtable底层都是采用数组加链表的形式实现。他们的区别如下：
+
+* HashMap继承自AbstractMap类，Hashtable继承自Dictionary类。
+* HashMap是非线程安全，Hashtable是线程安全的。多个线程可同时共享一个Hashtable，但多个线程同时共享Hashtap则不安全。
+* HashMap可以接受为null的键(key)和值(value)，Hashtable的键或值都不能为null。
+* 二者采用的Hash值不同，HashMap是重新计算key对象的hashcode，而Hashtable是直接使用key对象的hashcode。 (hashCode是jdk根据对象的地址或者字符串或者数字算出来的int类型的数值。)
+* HashMap在不指定容量的情况下的默认容量为16，而Hashtable为11，Hashtable不要求底层数组的容量一定要为2的整数次幂，而HashMap则要求一定为2的整数次幂。Hashtable扩容时，将容量变为原来的2倍加1，而HashMap扩容时，将容量变为原来的2倍。
+
+HashMap存数据的过程：
+
+HashMap内部维护了一个**存储数据的Entry数组，每一个Entry元素又是一个链表** ，HashMap采用链表来解决冲突。当准备添加一个key-value对时，首先通过hash(key)方法计算hash值，然后通过indexFor(hash,length)求该key-value对的存储位置，计算方法是先用hash&0x7FFFFFFF后，再对length取模，这就保证每一个key-value对都能存入HashMap中，当计算出的位置相同时，由于存入位置是一个链表，则把这个key-value对插入链表头。HashMap中key和value都允许为null。key为null的键值对永远都放在以table[0]为头结点的链表中。
+
+
+
+## ArrayList和LinkedList
+
+ArrayList和LinkedList都是继承了AbstractSequentialList，都实现了`List` ，`Cloneable` 和`Serializable` 接口。ArrayList和LinkedList都不是线程安全的。
+
+两者的区别是：
+
+* ArrayList还实现了`RandomAccess` 接口，LinkedList还实现了`Deque` 接口。
+
+* ArrayList是基于Object数组实现的，LinkedList内部数据结构是双向链表。
+
+* 对于随机访问，如get和set，ArrayList性能优于LinkedList，而对于增删操作，如add和remove，LinkedList性能要优于ArrayList。
+
+  ​
