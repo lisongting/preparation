@@ -292,6 +292,8 @@ public void buyTicket(){
 }
 ```
 
+相比同步方法，同步块是更好的选择，因为它不会锁住整个对象（当然也可以手动让他锁定整个对象），同步方法会锁住整个对象。
+
 ### 使用volatile关键字实现同步
 通常在多线程执行的时候，每个线程会先从内存中拷贝变量到CPU缓存中，因为每个线程可能在不同的CPU上进行处理，这就意味着同一个变量会被拷贝多次。这就造成了多线程并发访问无法同步的问题。而使用了volatile关键字的变量，JVM保证该变量每次读取都是从内存中读取，跳过CPU cache这一步，于是就达到了多个线程访问同一个变量的目的。
 
@@ -339,20 +341,40 @@ class Bank {
 }
 ```
 
-### wait() 和 notify()
-wait()用来让当前线程等待，会释放锁。
-notify用来唤醒对应线程，让其继续执行。
+### wait() ,notify(),notifyAll()
+* wait() :用来让当前线程等待，会释放锁。wait会把持有该对象线程的对象控制权交出去，然后处于等待状态。
+* notify(): 用来唤醒对应线程，让其继续执行。notify会通知某个正在等待这个对象的线程可以继续运行。
+* notifyAll():会通知所有等待这个对象控制权的线程继续运行，如果有多个正在等待该对象控制权时，具体唤醒哪一个线程，由操作系统进行调度。
+
 在调用wait(), notify()或notifyAll()的时候，必须先获得锁，且状态变量须由该锁保护，而固有锁对象与固有条件队列对象又是同一个对象。也就是说，要在某个对象上执行wait，notify，先必须锁定该对象，而对应的状态变量也是由该对象锁保护的。
 典型的wait()使用示例：
 ```java
-public void test() throws InterruptedException {
+int money = 0;
+
+public void putMoney(int num) throes InterruptedException{
+    synchronized(obj){
+        money +=num;
+    }
+}
+public int getMoney(int num) throws InterruptedException {
     synchronized(obj) {
-      while (! contidition) {
+      while (money<=0) {
         obj.wait();
       }
+      money -=num;
+
+      obj.notify();//唤醒
+      return num;
     }
   }
 ```
+
+注意:
+1.有synchronized的地方不一定有wait和notify。
+
+2.有wait和notify的地方必有synchronized,因为调用wait和notify/notifyAll必须要先获得对象锁。
+
+3.在判断条件时尽量用while而不是if，这是因为在某些特定情况下，线程很有可能被假唤醒，使用while来循环检测更稳妥。
 
 
 
@@ -563,10 +585,15 @@ System.out.println(dataFormat.format(date1));
 ​        2) 一个未捕获的异常终止了run方法而使线程猝死。
 ​        为了确定线程在当前是否存活着（就是要么是可运行的，要么是被阻塞了），需要使用isAlive方法。如果是可运行或被阻塞，这个方法返回true； 如果线程仍旧是new状态且不是可运行的， 或者线程死亡了，则返回false.
 
+## 创建线程的方式
+* Thread
+* Runnable
+*
+
 ## Sleep 和Wait的区别
 
 1.这两个方法来自不同的类分别是，sleep来自Thread类，和wait来自Object类。
-2.最主要是sleep方法**不释放锁** ，而wait方法**释放了锁** ，使得其他线程可以使用同步控制块或者方法。sleep不出让系统资源；wait是进入线程等待池等待，出让系统资源，其他线程可以占用CPU。一般wait不会加时间限制， 因为如果wait线程的运行资源不够，再出来也没用，要等待其他线程调用**notify/notifyAll** 唤醒等待池中的所有线程，才会进入就绪队列等待OS分配系统资源。sleep(milliseconds)可以用时间指定使它自动唤醒过来，如果时间不到只能调用interrupt()强行打断。
+2.最主要是sleep方法**不释放锁** ，而wait方法**释放了锁** ，使得其他线程可以使用同步控制块或者方法。sleep不出让系统资源；wait是进入线程等待池等待，出让系统资源，其他线程可以占用CPU。一般wait不会加时间限制， 因为如果wait线程的运行资源不够，再出来也没用，要等待其他线程调用**notify/notifyAll** 唤醒等待池中的所有线程，才会进入就绪队列等待操作系统分配系统资源。sleep(milliseconds)可以用时间指定使它自动唤醒过来，如果时间不到只能调用interrupt()强行打断。注意：`interrupt()` 只是把Thread内的中断状态设置为true，并不是真正的中断线程，要想中断线程，需要在线程里使用`isInterrupted()` 方法来判断该标志位是否为true，如果为true，则手动停止运行。
 3.wait，notify和notifyAll只能在同步控制方法或者同步控制块里面使用，而sleep可以在任何地方使用。
 4.Sleep需要捕获异常,而wait不需要。
 
@@ -601,3 +628,177 @@ ArrayList和LinkedList都是继承了AbstractSequentialList，都实现了`List`
 * 对于随机访问，如get和set，ArrayList性能优于LinkedList，而对于增删操作，如add和remove，LinkedList性能要优于ArrayList。
 
   ​
+  ## 线程池
+  Java通过`Executors`类提供四种线程池，分别是：
+  * `Executors.newCachedThreadPool()` :创建一个可缓存的线程池，如果线程池长度超过处理需要，可灵活回收空闲线程，若无可回收，则新建线程。
+  * `Executors.newFixedThreadPool()` :创建一个定长线程池，可控制线程最大并发数，超出的线程会在队列中等待。
+  * `Executors.newScheduledThreadPool()` : 创建一个定长线程池，支持定时以及周期任务执行。
+  * `Executors.newSingleThreadExecutor()` :创建一个单线程化的线程池，它只会用唯一的工作线程来执行任务，保证所有任务按照指定顺序(FIFO,LIFO,优先级)执行。
+
+  1.**Executors.newCachedThreadPool()**
+
+  ```java
+  public static void main(String[] args) {
+		ExecutorService threadPool = Executors.newCachedThreadPool();
+		for(int i=1;i<4;i++){
+			final int taskId = i;
+			threadPool.execute(new Runnable(){
+				public void run(){
+					for(int j=1;j<5;j++){
+						try{
+							Thread.sleep(200);
+						}catch(InterruptedException e){
+							e.printStackTrace();
+						}
+						System.out.println("任务"+taskId+"的第"+j+"次执行");
+					}
+				}
+			});
+		}
+		threadPool.shutdown();
+	}
+    /**运行结果
+	任务4的第1次执行
+	任务3的第1次执行
+	任务2的第1次执行
+	任务1的第1次执行
+	任务1的第2次执行
+	任务4的第2次执行
+	任务2的第2次执行
+	任务3的第2次执行
+	任务4的第3次执行
+	任务1的第3次执行
+	任务2的第3次执行
+	任务3的第3次执行
+	任务1的第4次执行
+	任务2的第4次执行
+	任务4的第4次执行
+	任务3的第4次执行
+	 */
+
+  ```
+
+在CachedThreadPool中，三个任务是交替执行的，CachedThreadPool会创建一个缓存区，将初始化的线程缓存起来，如果线程有可用的，就使用之前创建好的线程，如果没有可用的，就新创建线程，终止并从缓存中移除已有60秒未被使用的线程。
+
+2.**Executors.newFixedThreadPool()**
+
+```java
+public static void main(String[] args) {
+		ExecutorService threadPool = Executors.newFixedThreadPool(3);//注意这里指定了线程池中线程数量为三
+		for(int i=1;i<5;i++){
+			final int taskId = i;
+			threadPool.execute(new Runnable(){
+				public void run(){
+					for(int j=1;j<5;j++){
+						try{
+							Thread.sleep(200);
+						}catch(InterruptedException e){
+							e.printStackTrace();
+						}
+						System.out.println("任务"+taskId+"的第"+j+"次执行");
+					}
+				}
+			});
+		}
+		threadPool.shutdown();
+
+	}
+	/**
+	 *  任务1的第1次执行
+		任务3的第1次执行
+		任务2的第1次执行
+		任务2的第2次执行
+		任务1的第2次执行
+		任务3的第2次执行
+		任务1的第3次执行
+		任务2的第3次执行
+		任务3的第3次执行
+		任务2的第4次执行
+		任务1的第4次执行
+		任务3的第4次执行
+		任务4的第1次执行
+		任务4的第2次执行
+		任务4的第3次执行
+		任务4的第4次执行
+	 */
+```
+在固定大小（3）的线程池中，循环执行了4个任务，由输出结果可知，前3个线程交替执行完，然后在去执行第四个任务，FixedThreadPool是固定大小的，如果当前需要执行的任务超过了池的大小，则多余的任务就处于等待状态，直到有线程执行完毕，再去执行处于等待状态的任务。
+
+3.**Executors.newSingleThreadExecutor()**
+
+```java
+public static void main(String[] args) {
+		ExecutorService threadPool = Executors.newSingleThreadExecutor();
+		for(int i=1;i<5;i++){
+			final int taskId = i;
+			threadPool.execute(new Runnable(){
+				public void run(){
+					for(int j=1;j<5;j++){
+						try{
+							Thread.sleep(200);
+						}catch(InterruptedException e){
+							e.printStackTrace();
+						}
+						System.out.println("任务"+taskId+"的第"+j+"次执行");
+					}
+				}
+			});
+		}
+		threadPool.shutdown();
+
+	}
+	/**
+	 *  任务1的第1次执行
+		任务1的第2次执行
+		任务1的第3次执行
+		任务1的第4次执行
+		任务2的第1次执行
+		任务2的第2次执行
+		任务2的第3次执行
+		任务2的第4次执行
+		任务3的第1次执行
+		任务3的第2次执行
+		任务3的第3次执行
+		任务3的第4次执行
+		任务4的第1次执行
+		任务4的第2次执行
+		任务4的第3次执行
+		任务4的第4次执行
+	 */
+```
+创建一个单线程化的Executor，即只创建唯一的工作者线程来执行任务，它只会用唯一的工作线程来执行任务，保证所有任务按照指定顺序(FIFO, LIFO, 优先级)执行。如果这个线程异常结束，会有另一个取代它，保证顺序执行。单工作线程最大的特点是可保证顺序地执行各个任务，并且在任意给定的时间不会有多个线程是活动的。
+
+
+4.**Executors.newSingleThreadExecutor()**
+
+```java
+public static void main(String[] args) {
+		ScheduledExecutorService  threadPool = Executors.newScheduledThreadPool(3);
+
+		//方式一：3秒后执行，只执行一次
+		threadPool.schedule(new Runnable(){
+			public void run(){
+				System.out.println("start running");
+			}
+		},3,TimeUnit.SECONDS);
+
+		//方式二：5秒后执行，然后每隔2秒执行一次
+		threadPool.scheduleAtFixedRate(new Runnable() {  
+            @Override  
+            public void run() {  
+                System.out.println("I am running");  
+            }  
+        }, 5, 2, TimeUnit.SECONDS);  
+
+	}
+	/**
+	 *  start running
+		I am running
+		I am running
+		I am running
+		I am running
+		I am running
+		*****
+	 */
+```
+ ScheduledThreadPool可以定时的或延时的执行任务。相当于`TimerTask`
