@@ -315,32 +315,6 @@ class Bank{
 ```
 volatile不提供任何原子操作，也不能用来修饰final类型的变量。
 
-### 使用ReentrantLock
-ReentrantLock是位于java.utl.concurrent包中，ReentrantLock是可重入，互斥，实现了Lock接口的锁。
-ReentrantLock类的常用方法有：
-* `ReentrantLock() ` ：创建一个ReentrantLock实例。
-* `lock()`：获得锁
-* `unlock()`：释放锁
-
-使用示例：
-```java
-class Bank {
-    private int account = 100;
-    private Lock lock = new ReentrantLock();
-    public int getAccount(){
-        return account;
-    }
-    public void save(int money){
-        lock.lock();
-        try{
-            account += money;
-        }finally{
-            lock.unlock();
-        }
-    }
-}
-```
-
 ### wait() ,notify(),notifyAll()
 * wait() :用来让当前线程等待，会释放锁。wait会把持有该对象线程的对象控制权交出去，然后处于等待状态。
 * notify(): 用来唤醒对应线程，让其继续执行。notify会通知某个正在等待这个对象的线程可以继续运行。
@@ -376,6 +350,213 @@ public int getMoney(int num) throws InterruptedException {
 
 3.在判断条件时尽量用while而不是if，这是因为在某些特定情况下，线程很有可能被假唤醒，使用while来循环检测更稳妥。
 
+### 使用ReentrantLock
+ReentrantLock是位于java.utl.concurrent包中，ReentrantLock是可重入，互斥，实现了Lock接口的锁。
+Lock接口：
+```java
+public interface Lock{
+    //获取锁,调用该方法当前线程将会获取锁，当锁获取后，该方法将返回。
+    void lock();
+    //可中断获取锁，与lock()方法不同之处在于该方法会响应中断，即在锁的获取过程中可以中断当前线程
+    void lockInterruptibly() throws InterruptedException;
+    //尝试非阻塞的获取锁，调用该方法立即返回，true表示获取到锁
+    boolean tryLock() ;
+    //超时获取锁，以下情况会返回：时间内获取到了锁，时间内被中断，时间到了没有获取到锁。
+    boolean tryLock(long time,TimeUnit unit) throws InterruptedException;
+    //释放锁
+    void unlock()
+    //返回一个与当前锁绑定的Condition对象
+    Condition newCondition();
+}
+
+```
+ReentrantLock类的常用方法有：
+* `ReentrantLock() ` ：创建一个ReentrantLock实例。
+* `lock()`：获得锁
+* `unlock()`：释放锁
+
+使用示例：
+```java
+public class LockTest {
+	private static Lock lock = new ReentrantLock();
+	public static void main(String[] args) {
+		new Thread(new Runnable(){
+			public void run(){
+				output("hello");
+			}
+		}).start();
+
+		new Thread(new Runnable(){
+			public void run(){
+				output("android");
+			}
+		}).start();
+	}
+
+	public static void output(String str){
+		lock.lock();
+		for(int i=0;i<str.length();i++){
+			System.out.print(" "+str.charAt(i));
+		}
+		System.out.println();
+		lock.unlock();
+	}
+	/**[运行结果]
+	    h e l l o
+ 		a n d r o i d
+	 */
+}
+```
+
+
+### 读写锁ReedWriteLock
+ReadWriteLock是一个接口：
+```java
+public interface ReadWriteLock {
+    //获取读锁
+    Lock readLock();
+    //获取写锁
+    Lock writeLock();
+}
+```
+
+读写锁的特点：
+* 读与写之间互斥
+* 写与写之间互斥
+* 读与读之间不互斥
+
+
+ReadWriteLock的实现类是ReentrantReadWriteLock 。
+使用示例：
+```java
+public class LockTest2 {
+	private static int data ;
+	private static ReadWriteLock readWriteLock = new ReentrantReadWriteLock();
+	public static void main(String[] args) {
+		for(int i=0;i<2;i++){
+			new Thread(new Runnable(){
+				public void run(){
+					set(new Random().nextInt(10));
+				}
+			}).start();
+		}
+		for(int i=0;i<3;i++){
+			new Thread(new Runnable(){
+				public void run(){
+					read();
+				}
+			}).start();
+		}
+	}
+
+	public static void set(int value){
+		//获取写锁
+		readWriteLock.writeLock().lock();
+		System.out.println("准备写入数据");
+		try {
+			Thread.sleep(500);
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
+		data = value;
+		System.out.println("写入数据："+value);
+		readWriteLock.writeLock().unlock();
+	}
+
+	public static void read(){
+		//获取读锁
+		readWriteLock.readLock().lock();
+		System.out.println("准备读取数据");
+		try {
+			Thread.sleep(500);
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
+		System.out.println("读取到数据："+data);
+		readWriteLock.readLock().unlock();
+	}
+	/**[运行结果]
+	 *  准备写入数据
+		写入数据：7
+		准备读取数据
+		准备读取数据
+		读取到数据：7
+		读取到数据：7
+		准备写入数据
+		写入数据：2
+		准备读取数据
+		读取到数据：2
+	 */
+}
+```
+
+
+### Condition
+Condition是用来替代传统的Object的wait()、notify()实现线程间的协作，相比使用Object的wait()、notify()，使用Condition的await()、signal()这种方式实现线程间协作更加安全和高效。
+Condition接口中有如下常用的方法：
+* await() : 让当前线程等待，并释放锁。相当于Object的`wait()`
+* signal() : 唤醒一个处于等待状态的线程。相当于Object的`notify()`
+* signalAll() : 唤醒所有 处于等待状态的线程。相当于Object的`notifyAll()`
+
+Condition的强大之处在于它可以为多个线程间建立不同的Condition。
+使用示例：
+```java
+class BoundedBuffer {  
+   final Lock lock = new ReentrantLock();//锁对象  
+   final Condition notFull  = lock.newCondition();//写线程条件   
+   final Condition notEmpty = lock.newCondition();//读线程条件   
+
+   final Object[] items = new Object[100];//缓存队列  
+   int putptr/*写索引*/, takeptr/*读索引*/, count/*队列中存在的数据个数*/;  
+
+   public void put(Object x) throws InterruptedException {  
+     lock.lock();  
+     try {  
+       while (count == items.length)//如果队列满了   
+         notFull.await();//阻塞写线程  
+       items[putptr] = x;//赋值   
+       if (++putptr == items.length) putptr = 0;//如果写索引写到队列的最后一个位置了，那么置为0  
+       ++count;//个数++  
+       notEmpty.signal();//唤醒读线程  
+     } finally {  
+       lock.unlock();  
+     }  
+   }  
+
+   public Object take() throws InterruptedException {  
+     lock.lock();  
+     try {  
+       while (count == 0)//如果队列为空  
+         notEmpty.await();//阻塞读线程  
+       Object x = items[takeptr];//取值   
+       if (++takeptr == items.length) takeptr = 0;//如果读索引读到队列的最后一个位置了，那么置为0  
+       --count;//个数--  
+       notFull.signal();//唤醒写线程  
+       return x;  
+     } finally {  
+       lock.unlock();  
+     }  
+   }   
+ }
+
+```
+1. 一个写线程执行，调用put方法；
+
+2. 判断count是否为100，显然没有100；
+
+3. 继续执行，存入值；
+
+4. 判断当前写入的索引位置++后，是否和100相等，相等将写入索引值变为0，并将count+1；
+
+5. 仅唤醒读线程阻塞队列中的一个；
+
+6. 一个读线程执行，调用take方法；
+
+7. ……
+
+8. 仅唤醒写线程阻塞队列中的一个。
+
+这就是多个Condition的强大之处，假设缓存队列中已经存满，那么阻塞的肯定是写线程，唤醒的肯定是读线程，相反，阻塞的肯定是读线程，唤醒的肯定是写线程
 
 
 
@@ -585,10 +766,122 @@ System.out.println(dataFormat.format(date1));
 ​        2) 一个未捕获的异常终止了run方法而使线程猝死。
 ​        为了确定线程在当前是否存活着（就是要么是可运行的，要么是被阻塞了），需要使用isAlive方法。如果是可运行或被阻塞，这个方法返回true； 如果线程仍旧是new状态且不是可运行的， 或者线程死亡了，则返回false.
 
-## 创建线程的方式
+## 线程几种创建方式
 * Thread
 * Runnable
-*
+* Callable 和Future
+
+### Thread
+```java
+Thread t = new Thread(){
+    public void run(){
+        //do something
+    }    
+};
+t.start();
+```
+
+### Runnable
+```java
+
+Runnable task = new Runnable(){
+    public void run(){
+        //do something
+    }
+};
+Thread t = new Thread(task);
+t.start();
+```
+
+### Callable && Future
+Java.util.concurrent包中提供了Callable接口,Callable中提供了一个call方法可作为线程执行体。
+```java
+public interface Callable<V> {
+    /**
+     * Computes a result, or throws an exception if unable to do so.
+     *
+     * @return computed result
+     * @throws Exception if unable to compute a result
+     */
+    V call() throws Exception;
+}
+```
+`call()` 方法与`run()` 方法的区别是，`call()`可以有返回值，`call()`可以抛出异常。
+
+Java不允许Callable对象直接作为线程的target。
+
+Java提供了`Future`接口来代表Callable接口里`call` 的返回值，并为Future接口提供了`FutureTask`实现类，`FutureTask` 还实现了Runnable接口，因此可以作为Thread的Target。
+Future接口：
+```java
+public interface Future<V> {
+     //mayInterruptIfRunning : 如果为true，表示把运行中的任务终止，false表示允许任务执行完
+     //返回值：如果任务已经完成或之前已经被取消过，则返回false，返回true表示中断任务成功
+     //这个方法返回值后(true或false)，后续调用isDone都会返回true
+    boolean cancel(boolean mayInterruptIfRunning);
+
+     //在调用cancel后返回true，则表示已成功取消，这里就会返回true
+    boolean isCancelled();
+
+     //当任务执行完成后，或者是被取消，或者是异常终止，这个方法会返回true
+    boolean isDone();
+
+    //获取任务执行后的结果
+    V get() throws InterruptedException, ExecutionException;
+
+    //等待一段指定的时间，然后获取任务的执行结果
+    //如果时间到了还没执行完，则会抛出TimeoutException
+    V get(long timeout, TimeUnit unit)
+        throws InterruptedException, ExecutionException, TimeoutException;
+}
+```
+使用Callable和Future创建线程的步骤如下：
+* 创建Callable接口的实现类，并实现call方法；
+* 创建Callable接口实现类的实例，使用FutureTask类来包装Callable对象；
+* 使用FutureTask对象作为Thread对象的target创建并启动新线程，或使用线程池的submit方法；
+* 调用FutureTask对象的方法来获得子线程执行结束后的返回值。
+
+```java
+public class FutureTest {
+	static class Task implements Callable<String>{
+		public String call() throws InterruptedException{
+			System.out.println("Task任务开始执行");
+			//模拟耗时操作
+			Thread.sleep(3000);
+			System.out.println("3秒后，Task中耗时操作执行完成");
+			return "Task任务执行完成";
+		}
+	}
+
+	public static void main(String[] args) {
+		Task task = new Task();
+		FutureTask<String> futureTask = new FutureTask<>(task);
+		//方式一：使用Thread作为代理
+//		Thread thread = new Thread(futureTask);
+//		thread.start();
+
+		//方式二：使用线程池作为代理
+		ExecutorService executor = Executors.newCachedThreadPool();
+		executor.submit(futureTask);
+		executor.shutdown();
+		try{
+			Thread.sleep(1000);
+			System.out.println("主线程睡眠了1秒");
+			System.out.println("task任务的返回结果："+futureTask.get());
+		}catch(Exception e){
+			e.printStackTrace();
+		}
+		System.out.println("所有任务运行完毕");
+	}
+}
+/**[运行结果]
+    Task任务开始执行
+    主线程睡眠了1秒
+    3秒后，Task中耗时操作执行完成
+    task任务的返回结果：Task任务执行完成
+    所有任务运行完毕
+ */
+```
+可以看到，futureTask的`get()` 方法是一个阻塞式方法，当任务没有执行完毕时，会一直阻塞住调用`get()` 的线程。
 
 ## Sleep 和Wait的区别
 
