@@ -1,4 +1,4 @@
-# 23种设计模式 
+# 23种设计模式
 
 <h3 id="index">目录</h3>
 
@@ -6,17 +6,21 @@
 
 1.创建型
 
-
-
 * [单例模式](#单例模式)
+
 * [工厂方法模式](#工厂方法模式)
+
 * [抽象工厂模式](#抽象工厂模式)
 
+* [建造者模式](#建造者模式)
+
+* [原型模式](#原型模式)
+
+  ​
 
 
 
-
-<h2 id="六大设计原则">六大设计原则</h2> 
+<h2 id="六大设计原则">六大设计原则</h2>
 
 1.单一职责原则：一个类只负责一项职责。
 
@@ -36,7 +40,7 @@
 
 [回到目录](#index)
 
-<h2 id="单例模式">单例模式</h2> 
+<h2 id="单例模式">单例模式</h2>
 
 核心作用:保证一个类只有一个实例，并且提供一个访问该实例的全局访问点。
 
@@ -94,7 +98,7 @@ public class Singleton2{
 
 ```java
 public class Singleton3{
-  
+
   //在静态内部类里面进行
   private static class SingletonInstance{
     private static final Singleton3 instance = new Singleton3();
@@ -141,7 +145,7 @@ public class Singleton5{
             if(s == null){
               s = new Singleton5();
             }
-          } 
+          }
           instance = s;
         }
       }
@@ -153,7 +157,51 @@ public class Singleton5{
 
 [回到目录](#index)
 
-<h2 id="工厂方法模式">工厂方法模式</h2> 
+<h2 id="工厂方法模式">工厂方法模式</h2>
+
+1.简单工厂模式
+
+接口：Car
+
+```java
+public interface Car(){
+  void run();
+}
+```
+
+Car的实现类：
+
+```java
+public class Audio implements Car{
+  public void run(){
+    System.out.println("奥迪在跑");
+  }
+}
+public class Byd implements Car{
+  public void run(){
+    System.out.println("比亚迪在跑");
+  }
+}
+```
+
+工厂类
+
+```java
+public class CarFactory{
+  public static Car getCar(String name){
+    if(name.equals("byd")){
+      return new Byd();
+    }else if(name.equals("audi0")){
+      return new Audi();
+    }
+  }
+}
+
+```
+
+
+
+2.工厂方法模式
 
 接口：Car
 
@@ -211,7 +259,11 @@ Car car1 = new AudiFactory().createCar();
 Car car2 = new BydFactory().createCar();
 ```
 
-工厂方法模式优点：良好的封装性，结构清晰。可扩展性好。
+工厂方法模式优点：良好的封装性，结构清晰。可扩展性好。缺点：要写很多类。
+
+一般情况下使用简单工厂模式就可以了。
+
+
 
 [回到目录](#index)
 
@@ -221,7 +273,7 @@ Car car2 = new BydFactory().createCar();
 
 ```java
 public interface Car{
-  
+
 }
 ```
 
@@ -321,6 +373,249 @@ public class LowCarFactory implements CarFactory{
 
 * 简单工厂模式：虽然某种程度不符合设计原则，但实际使用最多。
 * 工厂方法模式：不修改已有类的前提下，通过增加新的工厂类实现扩展。
-* 抽象工厂模式：不可以增加产品，可以增加产品族。
+* 抽象工厂模式：不可以增加产品，可以增加产品族(轮胎、座椅、发动机.....)。
 
 [回到目录](#index)
+
+<h2 id="建造者模式">建造者模式</h2>
+工厂类模式提供的是创建单个类的模式，而建造者模式则是将各种产品集中起来进行管理，用来创建复合对象，所谓复合对象就是指某个类具有不同的属性。建造者模式(Builder)适用于：用于某个对象的构建过程比较复杂的情况。
+
+```java
+public class Bread{
+    private String brand;
+    public Bread(){}
+    public Bread(String brand){
+        this.brand = brand;
+    }
+    public void setBrand(String s){
+        brand = s;
+    }
+    public String getBrand(){
+        return brand;
+    }
+}
+public class Cream{
+    private String flavor ;
+    public Cream(){}
+    public Cream(String f){
+        flavor = f;
+    }
+    public void setFlavor(String s){
+        flavor = s;
+    }
+    public String getFlavor(){
+        return flavor;
+    }
+}
+
+public class Fruit{
+    private String name;
+    public Fruit(){}
+    public Fruit(String name){
+        this.name = name;
+    }
+    public void setName(String name){
+        this.name = name;
+    }
+}
+
+public class Cake{
+    private Bread bread;
+    private Cream cream;
+    private Fruit fruit;
+    public Cake(){}
+    public void setBread(Bread b){
+        bread = b;
+    }
+    public void setCream(Cream c){
+        cream = c;
+    }
+    public void setFruit(Fruit f){
+        fruit = f;
+    }
+    public Bread getBread(){
+        return bread;
+    }
+    public Cream getCream(){
+        return cream;
+    }
+    public Fruit getFruit(){
+        return fruit;
+    }
+}
+```
+
+接口：
+```java
+public interface Builder{
+    Bread buildBread();
+    Fruit buildFruit();
+    Cream buildCream();
+}
+
+//用于组装对象
+public interface Director{
+    Cake createCake();
+}
+```
+接口实现类
+```java
+//这个CakeBuilder就可以自定义，进行各种不同的实现，制作出来的蛋糕因此口味也不同
+public class CakeBuilder implements Builder{
+    public Bread buildBread(){
+        return new Bread("xxx-brand");
+    }
+    public Fruit buildFruit(){
+        return new Fruit("strawberry");
+    }
+    public Cream buildCream(){
+        return new Cream("normal-sweet");
+    }
+}
+
+public class CakeDirector implements Director{
+    private Builder builder;
+    public CakeDirector(Builder b){
+        builder = b;
+    }
+    Cake createCake(){
+        Cake cake = new Cake();
+        cake.setBread(builder.createBread());
+        cake.setFruit(builder.createFruit());
+        cake.setCream(builder.createCream());
+        return cake;
+    }
+}
+```
+使用
+```java
+CakeDirector director = new CakeDirector(new CakeBuilder());
+Cake c = director.createCake();
+```
+
+以下这种是另一种我觉得不错的建造者模式：
+(仿照OKHttp中的建造者模式)
+```java
+public class Request {
+    private String url;
+    private String method;
+
+    public Request(){}    
+    public String getUrl(){
+        return url;
+    }
+    public void  setUrl(String s){
+        this.url = s;
+    }
+    public String getMethod(){
+        return method;
+    }
+    public void setMethod(String method){
+        this.method = method;
+    }
+
+    public static class Builder(){
+        private Request request = new Request();
+        private static final String DEFAULT_URL = "http://localhost/resource";
+        private static final String DEFAULT_MEHTOD = "GET"
+        public Builder(){}
+        public Builder setUrl(String url){
+            request.setUrl(url);
+            return this;
+        }
+        public  Builder setMethod(String method){
+            request.setMethod(method);
+            return this;
+        }
+        public Request build(){
+            if(request.getMethod()==null){
+                request.setMethod(DEFAULT_MEHTOD);
+            }
+            if(request.getUrl()==null){
+                request.setUrl(DEFAULT_URL);
+            }
+            return request;
+        }
+
+    }
+}
+```
+
+
+[回到目录](#index)
+
+<h2 id="原型模式">原型模式</h2>
+原型模式(prototype)也叫克隆模式、拷贝模式。
+原型模式的适用场景：当通过new产生一个对象时，需要非常繁琐的数据准备或访问权限，则可以使用原型模式。
+实际就是java中的clone操作，以某个对象为原型，复制出新的对象。
+```java
+public class Sheep implements Cloneable{
+    private String name;
+    private Date birthday ;
+    public Sheep(){}
+    public Sheep(String name,Date date){
+        this.name = name;
+        this.date = date;
+    }
+    protected Object  clone() throws CloneNotSupportedException{
+        Object objct = super.clone();
+        return object;
+    }
+    public void setName(String name){
+        this.name = name;
+    }
+    public void setBirthday(Date date){
+        this.birthday  = date;
+    }
+    public String getName(){
+        return name;
+    }
+    public int getDate(){
+        return birthday;
+    }
+}
+```
+
+以上的这种是属于浅克隆，当出现下面这样的代码时就会有问题:
+```java
+Date d = new Date(111111111111L);
+Sheep s1 = new Sheep("dorly",d);
+Sheep s2 = s1.clone();
+d.setTime(2222222222222L);
+```
+这里修改了d之后，s1中的birthday 和s2中的birthday 都被修改了。因为s1和s2指向的是同一个date对象。
+因此，使用原型模式要使用深克隆：
+```java
+public class Sheep implements Cloneable{
+    private String name;
+    private Date birthday ;
+    public Sheep(){}
+    public Sheep(String name,Date date){
+        this.name = name;
+        this.date = date;
+    }
+    protected Object  clone() throws CloneNotSupportedException{
+        Object objct = super.clone();
+        //深克隆，将其内部属性进行拷贝
+        Sheep s = (Sheep) object;
+        s.birthday = this.birthday.clone();
+        return object;
+    }
+    public void setName(String name){
+        this.name = name;
+    }
+    public void setBirthday(Date date){
+        this.birthday  = date;
+    }
+    public String getName(){
+        return name;
+    }
+    public int getDate(){
+        return birthday;
+    }
+}
+```
+
+[回到目录](#index)
+
+<h2 id="适配器模式">适配器模式</h2>

@@ -15,7 +15,7 @@
 
 **垃圾回收回收的是无任何引用的对象占据的内存空间而不是对象本身**
 
-GC是垃圾回收的意思（gabage collection），内存处理器是编程人员容易出现问题的地方，忘记或者错误的内存回收导致程序或者系统的不稳定甚至崩溃，java的GC功能可以自动监测对象是否超过作用域从而达到自动回收内存的目的。
+GC是垃圾回收的意思（gabage collection），内存处理是编程人员容易出现问题的地方，忘记或者错误的内存回收导致程序或者系统的不稳定甚至崩溃，java的GC功能可以自动监测对象是否超过作用域从而达到自动回收内存的目的。
 
 显式通知JVM进行一次垃圾回收:
 
@@ -409,7 +409,7 @@ public class LockTest {
 ```
 
 
-### 读写锁ReedWriteLock
+### 读写锁ReadWriteLock
 ReadWriteLock是一个接口：
 ```java
 public interface ReadWriteLock {
