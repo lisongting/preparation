@@ -548,6 +548,7 @@ public class Request {
 原型模式(prototype)也叫克隆模式、拷贝模式。
 原型模式的适用场景：当通过new产生一个对象时，需要非常繁琐的数据准备或访问权限，则可以使用原型模式。
 实际就是java中的clone操作，以某个对象为原型，复制出新的对象。
+
 ```java
 public class Sheep implements Cloneable{
     private String name;
@@ -577,14 +578,17 @@ public class Sheep implements Cloneable{
 ```
 
 以上的这种是属于浅克隆，当出现下面这样的代码时就会有问题:
+
 ```java
 Date d = new Date(111111111111L);
 Sheep s1 = new Sheep("dorly",d);
 Sheep s2 = s1.clone();
 d.setTime(2222222222222L);
 ```
+
 这里修改了d之后，s1中的birthday 和s2中的birthday 都被修改了。因为s1和s2指向的是同一个date对象。
 因此，使用原型模式要使用深克隆：
+
 ```java
 public class Sheep implements Cloneable{
     private String name;
