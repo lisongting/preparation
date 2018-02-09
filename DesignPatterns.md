@@ -6,18 +6,22 @@
 
 1.创建型
 
-* [单例模式](#单例模式)
+* [1.1 单例模式](#单例模式)
+* [1.2 工厂方法模式](#工厂方法模式)
+* [1.3 抽象工厂模式](#抽象工厂模式)
+* [1.4 建造者模式](#建造者模式)
+* [1.5 原型模式](#原型模式)
 
-* [工厂方法模式](#工厂方法模式)
 
-* [抽象工厂模式](#抽象工厂模式)
+2.结构型
 
-* [建造者模式](#建造者模式)
-
-* [原型模式](#原型模式)
-
-  ​
-
+* [2.1 适配器模式](#适配器模式)
+* [2.2 装饰模式](#装饰模式)
+* [2.3 代理模式](#代理模式)
+* [2.4 外观模式](#外观模式)
+* [2.5 桥接模式](#桥接模式)
+* [2.6 组合模式](#组合模式)
+* [2.7 享元模式](#享元模式)
 
 
 <h2 id="六大设计原则">六大设计原则</h2>
@@ -622,4 +626,176 @@ public class Sheep implements Cloneable{
 
 [回到目录](#index)
 
-<h2 id="适配器模式">适配器模式</h2>
+## 适配器模式
+
+适配器模式将某个类的接口转换成客户端期望的另一个接口表示，目的是消除由于接口不匹配导致的兼容性问题。主要分为三种，类的适配器模式，对象的适配器模式，接口的适配器模式。
+适用性：
+
+### 类的适配器模式
+原理：通过继承来实现适配器功能。
+
+假设场景：Ps2接口与usb接口转换
+```java
+public interface Ps2{
+  void ps2();
+}
+
+public interface Usb{
+  void usb();
+}
+```
+Usb接口实现类：
+
+```java
+public class UsbImpl implements Usb{
+  @Override
+  public void usb(){
+    System.out.println("USB口");
+  }
+}
+```
+
+适配器Adapter:
+
+```java
+public class Adapter extends UsbImpl implments Ps2{
+  @Override
+  public void ps2(){
+    System.out.println("Ps2口");
+    usb();
+  }
+}
+```
+
+测试：
+
+```java
+public class test{
+  public static void mian(String [] args){
+    Ps2 p = new Adapter();
+    p.ps2();
+  }
+}
+```
+
+输出结果：
+
+````
+Ps2口
+USB口
+````
+
+### 对象的适配器模式
+
+原理：通过组合来实现适配器功能。
+
+```java
+public interface Ps2{
+  void ps2();
+}
+
+public interface Usb{
+  void usb();
+}
+```
+
+Usb实现类：
+
+```java
+public class UsbImpl implements Usb{
+  @Override
+  public void usb(){
+    System.out.println("USB口");
+  }
+}
+```
+
+适配器：
+
+```java
+public class Adapter implements Ps2{
+  private Usb usb;
+  public Adapter(Usb usb){
+    this.usb = usb;
+  }
+  @Override
+  public void ps2(){
+    System.out.println("Ps2口");
+    usb.usb();
+  }
+}
+```
+
+测试：
+
+```java
+public class test{
+  public static void main(String [] args){
+    Ps2 p = new Adapter(new UsbImpl());
+    p.ps2();
+  }
+}
+```
+
+输出结果：
+
+````
+Ps2口
+USB口
+````
+### 接口适配器模式
+
+原理：通过抽象类来实现适配。
+
+当存在这样一个接口，其中定义了N多的方法，而我们现在却只想使用其中的一个到几个方法，如果我们直接实现接口，那么我们要对所有的方法进行实现，哪怕我们仅仅是对不需要的方法进行置空（只写一对大括号，不做具体方法实现）也会导致这个类变得臃肿，调用也不方便，这时我们可以使用一个抽象类作为中间件，即适配器，用这个抽象类实现接口，而在抽象类中所有的方法都进行置空，那么我们在创建抽象类的继承类，而且重写我们需要使用的那几个方法即可。
+
+```java
+public interface Adaptable{
+  void method1();
+  void method2();
+  void method3();
+}
+```
+
+适配器：Adapter
+
+```java
+public abstract class Adapter implements Adaptable{
+  public void method1(){};
+  public void method2(){};
+  public void method3(){};
+}
+```
+
+实现类：Tester
+
+```java
+public class Tester extends Adapter{
+  public void method1(){
+    System.out.println("Tester method1");
+  }
+  public void method2(){
+    System.out.println("Tester method2");
+  }
+}
+```
+
+测试：
+
+```java
+public class Test{
+  public static void main(String [] args){
+   Adaptable a = new Tester();
+    a.method1();
+    a.method2();
+  }
+}
+```
+
+运行结果：
+
+```java
+Tester method1
+Tester method2
+```
+
