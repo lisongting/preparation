@@ -24,11 +24,11 @@
 * [2.7 享元模式](#享元模式)
 
 
-<h2 id="六大设计原则">六大设计原则</h2>
+## 六大设计原则
 
 1.单一职责原则：一个类只负责一项职责。
 
-2.里氏替换原则：所有引用基类的地方必须能透明地使用其子类的对象。
+2.里氏替换原则：所有引用基类的地方必须能透明地使用其子类的对象。所有父类对象出现的地方均能够被其子类对象替代。
 
 3.依赖倒置原则：高层模块不应该依赖底层模块，二者都应该依赖其抽象。抽象不应该依赖细节。细节应该依赖抽象。其核心就是**面向接口编程** 。在JAVA中的表现就是：
 
@@ -44,7 +44,7 @@
 
 [回到目录](#index)
 
-<h2 id="单例模式">单例模式</h2>
+## 单例模式
 
 核心作用:保证一个类只有一个实例，并且提供一个访问该实例的全局访问点。
 
@@ -161,7 +161,7 @@ public class Singleton5{
 
 [回到目录](#index)
 
-<h2 id="工厂方法模式">工厂方法模式</h2>
+## 工厂方法模式
 
 1.简单工厂模式
 
@@ -271,7 +271,7 @@ Car car2 = new BydFactory().createCar();
 
 [回到目录](#index)
 
-<h2 id="抽象工厂模式">抽象工厂模式</h2>
+## 抽象工厂模式
 
 抽象工厂模式：为创建一组相关或相互依赖的对象提供一个接口，而无需指定他们的具体类。抽象工厂模式工厂方法模式的优点。
 
@@ -381,7 +381,7 @@ public class LowCarFactory implements CarFactory{
 
 [回到目录](#index)
 
-<h2 id="建造者模式">建造者模式</h2>
+建造者模式
 工厂类模式提供的是创建单个类的模式，而建造者模式则是将各种产品集中起来进行管理，用来创建复合对象，所谓复合对象就是指某个类具有不同的属性。建造者模式(Builder)适用于：用于某个对象的构建过程比较复杂的情况。
 
 ```java
@@ -548,7 +548,7 @@ public class Request {
 
 [回到目录](#index)
 
-<h2 id="原型模式">原型模式</h2>
+原型模式
 原型模式(prototype)也叫克隆模式、拷贝模式。
 原型模式的适用场景：当通过new产生一个对象时，需要非常繁琐的数据准备或访问权限，则可以使用原型模式。
 实际就是java中的clone操作，以某个对象为原型，复制出新的对象。
@@ -799,3 +799,135 @@ Tester method1
 Tester method2
 ```
 
+[回到目录](#index)
+
+## 装饰模式
+
+装饰模式是一种用于代替继承的设计模式，无需通过集成增加子类就能扩展对象的新功能，使用对象的关联关系代替集成关系，更加灵活，同时避免类型体系的快速膨胀。装饰模式可以动态的为一个对象增加新的功能。
+
+接口ICar
+
+```java
+public interface ICar{
+  void move();
+}
+```
+
+具体构建角色（真实对象）
+
+```java
+class Car implements ICar{
+  @Override
+  public void move(){
+    System.out.println("在地上跑");
+  }
+}
+```
+
+装饰器角色：SuperCar
+
+```java
+class SuperCar implements ICar{
+  protected Icar car;
+  public SuperCar(Icar car){
+    super();
+    this.car = car;
+  }
+  @Override
+  public void move(){
+    car.move();
+  }
+}
+```
+
+具体装饰角色1：FlyCar 飞车
+
+```java
+class FlyCar extends SuperCar{
+  public FlyCar(Icar car){
+    super(car);
+  }
+  public void fly(){
+    System.out.println("在天上飞");
+  }
+  @Override
+  public void move(){
+    super.move();
+    fly();
+  }
+}
+```
+
+具体装饰角色2：WaterCar 水车
+
+```java
+class WaterCar extends SuperCar {
+  public WaterCar(Icar car){
+    super(car);
+  }
+  public void swim(){
+    System.out.println("在水里游");
+  }
+  @Override
+  public void move(){
+    super.move():
+    swim();
+  }
+}
+```
+
+测试：
+
+```java
+public class Test{
+  public static void main(String[] args){
+    Car c = new Car();
+    c.move();
+    System.out.println("增加新功能:飞行");
+    FlyCar cc = new FlyCar(c);
+    cc.move();
+    System.out.println("增加新功能:飞行,水里游");
+    WaterCar waterCar = new WaterCar(new FlyCar(new Car()));
+    waterCar.move();
+  }
+}
+```
+
+输出结果：
+
+```java
+在地上跑
+增加新功能:飞行
+在地上跑
+在天上飞
+增加新功能:飞行,水里游
+在地上跑
+在天上飞
+在水里游
+```
+
+[回到目录](#index)
+
+## 代理模式
+
+代理模式的核心：通过代理，控制对对象的访问。
+
+代理模式有几个角色：
+
+* 抽象角色：定义代理角色和真实角色的公共对外方法。
+* 真实角色：实现抽象角色，定义真实角色所要实现的业务逻辑，供代理角色调用。
+* 代理角色：实现抽象角色，是真实角色的代理，通过真实角色的业务逻辑方法来实现抽象方法，并可以附加自己的操作。统一的流程放到代理角色中处理。
+
+应用场景：
+
+* 安全代理：屏蔽对真实角色的直接访问。
+* 远程代理：通过代理类处理远程方法调用。
+* 延迟加载：限价在轻量级的代理对象，真正需要真实对象时再加载真实对象。
+
+### 静态代理
+
+
+
+### 动态代理
+
+[回到目录](#index)
