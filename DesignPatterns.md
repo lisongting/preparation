@@ -926,8 +926,176 @@ public class Test{
 
 ### 静态代理
 
+场景模拟：某明星被邀约唱歌，经纪人（代理）帮明星负责与邀请方面谈，签合同，明星负责唱歌，经纪人帮明星收钱。
 
+接口：Star
+
+```java
+public interface Star{
+  void confer();
+  void signContract();
+  void sing();
+  void getMoney();
+}
+```
+
+真实明星对象：
+
+```java
+public class RealStar implements Star{
+  public void confer(){
+    System.out.println("RealStar.confer()");
+  }
+  public void signContract(){
+    System.out.println("RealStar.signContract()");
+  }
+  public void sing(){
+    System.out.println("RealStar.sing()");
+  }
+  public void getMoney(){
+    System.out.println("RealStar.getMoney()");
+  }
+}
+```
+
+经纪人（代理）
+
+```java
+public class Proxy implements Star{
+  private Star star;
+  public Prooxy(Star s){
+    star = s;
+  }
+  public void confer(){
+    System.out.println("Proxy.confer()");
+  }
+  public void signContract(){
+    System.out.println("Proxy.signContract()");
+  }
+  public void sing(){
+    star.sing();
+  }
+  public void getMoney(){
+    System.out.println("Proxy.getMoney()");
+  }
+} 
+```
+
+测试：
+
+```java
+public class Test{
+  public static void main(String[] args){
+    Star star = new RealStar();
+    Proxy p = new Proxy(star);
+    p.confer();
+    p.signContract();
+    p.sing();
+    p.getMoney();
+  }
+}
+```
+
+运行结果：
+
+```java
+Proxy.confer()
+Proxy.signContract()
+RealStar.sing()
+Proxy.getMoney()
+```
+
+除了唱歌，其他繁琐的事情都由代理去做了。
 
 ### 动态代理
+
+动态代理：可以动态生成代理类。
+
+动态代理相比静态代理的优点: 抽象角色（接口）声明的所有方法都被转移到调用处理器一个集中的方法中处理，这样，可以更加灵活和统一的处理众多的方法。
+
+接口：Star
+
+```java
+public interface Star{
+  void confer();
+  void signContract();
+  void sing();
+  void getMoney();
+}
+```
+
+真实明星对象：
+
+```java
+public class RealStar implements Star{
+  public void confer(){
+    System.out.println("RealStar.confer()");
+  }
+  public void signContract(){
+    System.out.println("RealStar.signContract()");
+  }
+  public void sing(){
+    System.out.println("RealStar.sing()");
+  }
+  public void getMoney(){
+    System.out.println("RealStar.getMoney()");
+  }
+}
+```
+
+动态代理：
+
+```java
+import java.lang.reflect.InvocationHandler;
+import java.lang.reflect.Method;
+public class StarHandler implements InvocationHandler{
+  Star star;
+  public StarHandler(Star realStar){
+    super();
+    this.star = realStar;
+  }
+  @Override
+  public Object invoke(Object proxy,Method method,Object[] args )throws Throwable{
+    if(method.getName().equals("sing")){
+       method.invoke(star,args);
+    }else{
+      System.out.println(method.getName());
+    }
+	return null; 
+  }
+}
+```
+
+测试：
+
+```java
+import java.lang.reflect.Proxy;
+public class Test{
+  public static void main(String[] args){
+    Star star = new RealStar();
+   	StarHandler handler = new StarHandler(star);
+    Star starProxy = (Star)Proxy.newProxyInstance(ClassLoader.getSystemClassLoader(),new Class[]{Star.class},handler);
+    starProxy.signContract();
+    starProxy.sing();
+    starProxy.getMoney();
+  }
+}
+```
+
+运行结果：
+
+```java
+signContract
+RealStar.sing()
+getMoney
+```
+
+无论使用`starProxy` 调用什么方法，都会统一触发`InvocationHandler` 的`invoke` 方法，从而可以在`invoke` 方法中对Star的所有方法进行统一处理，实现灵活处理。
+
+[回到目录](#index)
+
+## 外观模式
+
+
 
 [回到目录](#index)
